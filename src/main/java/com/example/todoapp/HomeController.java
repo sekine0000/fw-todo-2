@@ -1,5 +1,6 @@
 package com.example.todoapp;
 
+import org.springframework.validation.BindingResult;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -7,6 +8,8 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import jakarta.validation.Valid;
 
 @Controller
 public class HomeController {
@@ -36,7 +39,11 @@ public class HomeController {
     }
 
     @PostMapping("/todos/confirm")
-    public String confirm(@ModelAttribute Todo todo) {
+    public String confirm(@Valid @ModelAttribute Todo todo, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return "create";
+        }
+
         return "create-confirm";
     }
 
@@ -66,8 +73,14 @@ public class HomeController {
     }
 
     @PostMapping("/todos/{id}/confirm")
-    public String editConfirm(@PathVariable Long id, @ModelAttribute Todo todo) {
+    public String editConfirm(@PathVariable Long id, @Valid @ModelAttribute Todo todo,
+            BindingResult bindingResult) {
         todo.setId(id);
+
+        if (bindingResult.hasErrors()) {
+            return "edit";
+        }
+
         return "edit-confirm";
     }
 
