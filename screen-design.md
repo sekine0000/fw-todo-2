@@ -46,10 +46,136 @@
 | `confirm-value` | 確認する値 | 登録の確認、編集の確認、削除確認 |
 | `confirm-actions` | 確認画面のボタンを並べる範囲 | 登録の確認、編集の確認、削除確認 |
 | `btn` | 主な操作のボタン | 6画面すべて |
-| `btn sub` | 補助操作のボタン | 登録、登録の確認、編集、編集の確認、削除確認 |
+| `btn sub` | 補助操作のボタン | 6画面すべて |
 | `link` | 編集、削除、並び替えの文字リンク | 一覧 |
 
-### 3.3 値の表示ルール
+### 3.3 CSS
+
+`src/main/resources/static/css/style.css` の中身は、次のとおりです。この1枚だけを使い、増やしません。
+
+```css
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    color: #334155;
+    background: #ffffff;
+    font-family: sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.container {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+.page-title {
+    margin: 0 0 24px;
+    color: #1e293b;
+    font-size: 28px;
+}
+
+.todo-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.todo-table th,
+.todo-table td {
+    border: 1px solid #94a3b8;
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 14px;
+}
+
+.todo-table th {
+    background: #f1f5f9;
+    font-weight: bold;
+}
+
+.flash {
+    margin: 0 0 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #f1f5f9;
+}
+
+.search-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.form-row {
+    margin-bottom: 16px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.form-input {
+    width: 100%;
+    border: 1px solid #94a3b8;
+    border-radius: 6px;
+    padding: 7px 10px;
+    background: #ffffff;
+    color: #334155;
+    font: inherit;
+}
+
+.search-bar .form-input {
+    width: auto;
+}
+
+.error {
+    margin: 4px 0 0;
+    color: #B91C1C;
+    font-weight: bold;
+}
+
+.confirm-value {
+    margin: 0 0 16px;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn {
+    display: inline-block;
+    border: 1px solid #334155;
+    border-radius: 7px;
+    padding: 7px 18px;
+    background: #334155;
+    color: #ffffff;
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn.sub {
+    background: #ffffff;
+    color: #334155;
+}
+
+.link {
+    color: #334155;
+    text-decoration: underline;
+}
+```
+
+### 3.4 値の表示ルール
 
 | 項目 | 保存される値 | 画面に表示する言葉 |
 |---|---|---|
@@ -143,7 +269,7 @@
 | 行の「編集」を押す | 対象の編集 `/todos/{id}/edit` へ移動する |
 | 行の「削除」を押す | 対象の削除確認 `/todos/{id}/delete` へ移動する |
 
-最初に一覧を開いたときは、期限が近い順で表示します。期限が未入力の行は、MySQL（データを保存・管理する仕組み）の通常の並びに従い、近い順では先、遠い順では後に表示します。
+最初に一覧を開いたときは、期限が近い順で表示します。
 
 ## 6. SCR-02 登録
 
@@ -239,7 +365,7 @@
 | ジャンル | 選択欄 | 必須 | 現在の値を選択。選択肢は指定の5種類 |
 | 優先度 | 選択欄 | 必須 | 現在の値を選択。高、中、低 |
 | 期限 | 日付入力 | 任意 | 現在の値。未入力なら空欄 |
-| 完了 | チェック欄 | 必須 | 完了ならチェックあり、未完了ならチェックなし |
+| 完了 | チェック欄 | ― | 完了ならチェックあり、未完了ならチェックなし |
 
 入力欄の下に「確認する」と「一覧へ」を表示します。
 
