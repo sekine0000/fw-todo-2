@@ -87,14 +87,24 @@
                 }
                 const todos = await res.json();
                 const cells = table.querySelectorAll('td[data-date]');
+                const now = new Date();
+                const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-                for (const todo of todos) {
-                    for (const cell of cells) {
-                        if (todo.dueDate === cell.dataset.date) {
-                            const title = document.createElement('div');
-                            title.textContent = todo.title;
-                            cell.appendChild(title);
+                for (const cell of cells) {
+                    if (!cell.dataset.date) continue;
+                    const dailyTodos = todos.filter(todo => todo.dueDate === cell.dataset.date);
+                    for (const todo of dailyTodos.slice(0, 3)) {
+                        const title = document.createElement('div');
+                        title.textContent = todo.title;
+                        if (todo.dueDate < today && todo.completed === false) {
+                            title.style.color = 'red';
                         }
+                        cell.appendChild(title);
+                    }
+                    if (dailyTodos.length > 3) {
+                        const more = document.createElement('div');
+                        more.textContent = `ほか ${dailyTodos.length - 3}件`;
+                        cell.appendChild(more);
                     }
                 }
             } catch (error) {
