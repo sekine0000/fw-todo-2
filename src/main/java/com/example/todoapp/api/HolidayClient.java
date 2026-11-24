@@ -24,15 +24,16 @@ public class HolidayClient {
         this.restClient = restClient;
     }
 
-    public record Result(Map<String, String> holidays, boolean unavailable) {}
+    public record Result(Map<String, String> holidays, boolean unavailable) {
+    }
 
     public Result fetchHolidays() {
         try {
             Map<String, String> holidays = restClient.get()
-                .uri("https://holidays-jp.github.invalid/api/v1/date.json")
-                .retrieve()
-                .body(new ParameterizedTypeReference<Map<String, String>>() {
-                });
+                    .uri("https://holidays-jp.github.io/api/v1/date.json")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<Map<String, String>>() {
+                    });
             return holidays == null ? new Result(Map.of(), true) : new Result(holidays, false);
         } catch (RestClientException ex) {
             return new Result(Map.of(), true);
