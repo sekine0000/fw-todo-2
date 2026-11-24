@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,14 +20,18 @@ public class HolidayApiController {
     }
 
     @GetMapping("/api/holidays")
-    public Map<String, String> holidays(
+    public ResponseEntity<Map<String, String>> holidays(
             @RequestParam(name = "from", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(name = "to", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        Map<String, String> holidays = holidayClient.fetchHolidays();
+        HolidayClient.Result result = holidayClient.fetchHolidays();
+        if (result.unavailable()) {
+            return ResponseEntity.ok().header("X-Holidays-Unavailable", "true").body(result.holidays());
+        }
+        Map<String, String> holidays = result.holidays();
         if (from == null && to == null) {
-            return holidays;
+            return ResponseEntity.ok(holidays);
         }
 
         Map<String, String> filtered = new LinkedHashMap<>();
@@ -37,6 +42,6 @@ public class HolidayApiController {
                 filtered.put(date, name);
             }
         });
-        return filtered;
+        return ResponseEntity.ok(filtered);
     }
 }
