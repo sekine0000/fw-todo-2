@@ -1,0 +1,20 @@
+package com.example.todoapp.api;
+
+import java.util.Map;
+
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+
+@Component
+public class HolidayClient {
+
+    private final RestClient restClient = RestClient.create();
+
+    public Map<String, String> fetchHolidays() {
+        return restClient.get()
+                .uri("https://holidays-jp.github.io/api/v1/date.json")
+                .retrieve()
+                .body(new ParameterizedTypeReference<Map<String, String>>() {});
+    }
+}
