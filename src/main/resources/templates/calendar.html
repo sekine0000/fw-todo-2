@@ -35,12 +35,50 @@
         </table>
     </main>
     <script>
+        async function loadHolidays(table, params) {
+            const cells = table.querySelectorAll('td[data-date]');
+            for (const cell of cells) {
+                if (!cell.dataset.date) continue;
+                const day = new Date(`${cell.dataset.date}T00:00:00`).getDay();
+                if (day === 6) cell.style.backgroundColor = '#e3f2fd';
+                if (day === 0) cell.style.backgroundColor = '#fce4ec';
+            }
+
+            function showUnavailable() {
+                const message = document.createElement('p');
+                message.textContent = '祝日を取れませんでした';
+                message.setAttribute('role', 'status');
+                document.querySelector('main').prepend(message);
+            }
+
+            try {
+                const res = await fetch(`/api/holidays?${params}`);
+                if (res.headers.has('X-Holidays-Unavailable')) {
+                    showUnavailable();
+                    return;
+                }
+                if (!res.ok) throw new Error('祝日を取得できませんでした');
+                const holidays = await res.json();
+                for (const cell of cells) {
+                    if (Object.prototype.hasOwnProperty.call(holidays, cell.dataset.date)) {
+                        cell.style.backgroundColor = '#fff3cd';
+                        cell.title = holidays[cell.dataset.date];
+                    }
+                }
+            } catch (error) {
+                showUnavailable();
+                console.error('祝日の読み込みに失敗しました', error);
+            }
+        }
+
         async function loadTodos() {
             const table = document.querySelector('.calendar-table');
             const params = new URLSearchParams({
                 from: table.dataset.from,
                 to: table.dataset.to
             });
+
+            loadHolidays(table, params);
 
             try {
                 const res = await fetch(`/api/todos?${params}`);
