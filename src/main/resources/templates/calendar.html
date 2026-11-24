@@ -34,5 +34,37 @@
             </tbody>
         </table>
     </main>
+    <script>
+        async function loadTodos() {
+            const table = document.querySelector('.calendar-table');
+            const params = new URLSearchParams({
+                from: table.dataset.from,
+                to: table.dataset.to
+            });
+
+            try {
+                const res = await fetch(`/api/todos?${params}`);
+                if (!res.ok) {
+                    throw new Error('やることを取得できませんでした');
+                }
+                const todos = await res.json();
+                const cells = table.querySelectorAll('td[data-date]');
+
+                for (const todo of todos) {
+                    for (const cell of cells) {
+                        if (todo.dueDate === cell.dataset.date) {
+                            const title = document.createElement('div');
+                            title.textContent = todo.title;
+                            cell.appendChild(title);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('やることの読み込みに失敗しました', error);
+            }
+        }
+
+        loadTodos();
+    </script>
 </body>
 </html>
