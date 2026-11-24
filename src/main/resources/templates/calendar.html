@@ -9,9 +9,15 @@
 <body>
     <main class="container">
         <h1 class="page-title" th:text="${year + '年' + month + '月'}">カレンダー</h1>
-        <nav class="calendar-nav" aria-label="月の切り替え">
-            <a class="link" th:href="@{/calendar(year=${previousMonth.year}, month=${previousMonth.monthValue})}">前の月</a>
-            <a class="link" th:href="@{/calendar(year=${nextMonth.year}, month=${nextMonth.monthValue})}">次の月</a>
+        <nav class="calendar-nav" aria-label="カレンダーの操作">
+            <div class="calendar-nav-group">
+                <a class="link" th:href="@{/calendar(year=${previousMonth.year}, month=${previousMonth.monthValue})}">前の月</a>
+                <a class="link" th:href="@{/calendar(year=${nextMonth.year}, month=${nextMonth.monthValue})}">次の月</a>
+            </div>
+            <div class="calendar-nav-group">
+                <a class="link" th:href="@{/todos}">表で見る</a>
+                <a class="btn" th:href="@{/todos/new}">新規登録</a>
+            </div>
         </nav>
         <table class="calendar-table" th:attr="data-from=${firstDay},data-to=${lastDay}" th:aria-label="${year + '年' + month + '月のカレンダー'}">
             <thead>
@@ -94,7 +100,9 @@
                     if (!cell.dataset.date) continue;
                     const dailyTodos = todos.filter(todo => todo.dueDate === cell.dataset.date);
                     for (const todo of dailyTodos.slice(0, 3)) {
-                        const title = document.createElement('div');
+                        const title = document.createElement('a');
+                        title.href = `/todos/${todo.id}/edit`;
+                        title.className = 'calendar-todo link';
                         title.textContent = todo.title;
                         if (todo.dueDate < today && todo.completed === false) {
                             title.style.color = 'red';

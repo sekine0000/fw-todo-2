@@ -121,7 +121,19 @@ body {
 .calendar-nav {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    gap: 16px;
     margin-bottom: 16px;
+}
+
+.calendar-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.calendar-todo {
+    display: block;
 }
 
 .calendar-table {
