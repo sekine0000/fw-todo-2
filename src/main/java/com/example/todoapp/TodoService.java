@@ -33,6 +33,15 @@ public class TodoService {
         return todoMapper.findById(id);
     }
 
+    public long count(String keyword, String category, boolean showCompleted) {
+        return todoMapper.count(keyword, category, showCompleted);
+    }
+
+    public List<Todo> searchPage(String keyword, String category, String order, boolean showCompleted,
+            long offset) {
+        return todoMapper.searchPage(keyword, category, order, showCompleted, offset);
+    }
+
     public void create(Todo todo) {
         todoMapper.insert(todo);
         log.info("登録: id={}", todo.getId());

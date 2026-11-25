@@ -15,6 +15,13 @@ public interface TodoMapper {
 
     Todo findById(Long id);
 
+    long count(@Param("keyword") String keyword, @Param("category") String category,
+            @Param("showCompleted") boolean showCompleted);
+
+    List<Todo> searchPage(@Param("keyword") String keyword, @Param("category") String category,
+            @Param("order") String order, @Param("showCompleted") boolean showCompleted,
+            @Param("offset") long offset);
+
     void insert(Todo todo);
 
     void update(Todo todo);

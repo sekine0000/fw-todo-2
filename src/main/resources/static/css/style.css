@@ -135,6 +135,13 @@ body {
     margin-bottom: 16px;
 }
 
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+}
+
 .calendar-nav-group {
     display: flex;
     align-items: center;

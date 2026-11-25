@@ -74,6 +74,14 @@
                 </tr>
             </tbody>
         </table>
+        <nav class="pagination" aria-label="ページ選択" th:if="${totalPages > 1}">
+            <th:block th:each="number : ${#numbers.sequence(1, totalPages)}">
+                <span class="btn" aria-current="page" th:if="${number == currentPage}" th:text="${number}"></span>
+                <a class="btn sub" th:unless="${number == currentPage}"
+                   th:href="@{/todos(keyword=${keyword}, category=${category}, order=${order}, showCompleted=${showCompleted}, page=${number})}"
+                   th:text="${number}"></a>
+            </th:block>
+        </nav>
     </div>
     <script>
         const now = new Date();

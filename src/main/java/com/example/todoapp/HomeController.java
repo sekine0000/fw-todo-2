@@ -31,10 +31,17 @@ public class HomeController {
     public String todos(@RequestParam(defaultValue = "") String keyword,
             @RequestParam(defaultValue = "") String category,
             @RequestParam(defaultValue = "asc") String order,
-            @RequestParam(defaultValue = "false") boolean showCompleted, Model model) {
+            @RequestParam(defaultValue = "false") boolean showCompleted,
+            @RequestParam(defaultValue = "1") int page, Model model) {
         String selectedOrder = "desc".equals(order) ? "desc" : "asc";
+        long total = todoService.count(keyword, category, showCompleted);
+        long totalPages = Math.max(1, (total + 9) / 10);
+        long currentPage = Math.min(Math.max(1, page), totalPages);
 
-        model.addAttribute("todos", todoService.search(keyword, category, selectedOrder, showCompleted));
+        model.addAttribute("todos", todoService.searchPage(keyword, category, selectedOrder, showCompleted,
+                (currentPage - 1) * 10));
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("totalPages", totalPages);
         model.addAttribute("keyword", keyword);
         model.addAttribute("category", category);
         model.addAttribute("order", selectedOrder);
