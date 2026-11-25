@@ -20,6 +20,51 @@ class TodoappApplicationTests {
 
     @Autowired WebApplicationContext context;
     @Autowired TodoMapper mapper;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired com.example.todoapp.mcp.TodoTools tools;
+
+    @Test
+    @Transactional
+    void deletedTodoIsHiddenEverywhereAndCanBeRestored() throws Exception {
+        Todo todo = new Todo();
+        todo.setTitle("trash-test-" + System.nanoTime());
+        todo.setCategory("プログラミング");
+        todo.setPriority(2);
+        todo.setCompleted(true);
+        mapper.insert(todo);
+        var mvc = MockMvcBuilders.webAppContextSetup(context).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .post("/todos/{id}/delete", todo.getId()))
+                .andExpect(status().is3xxRedirection());
+        assertNotNull(jdbc.queryForObject("SELECT deleted_at FROM todos WHERE id = ?",
+                LocalDateTime.class, todo.getId()));
+        assertNull(mapper.findById(todo.getId()));
+        assertEquals(0, mapper.count(todo.getTitle(), "", true));
+        assertTrue(mapper.searchPage(todo.getTitle(), "", "asc", true, 0).isEmpty());
+        assertTrue(tools.listTodos(todo.getTitle(), null, null, null).isEmpty());
+        assertNull(tools.getTodo(todo.getId()));
+        mvc.perform(get("/api/todos").param("keyword", todo.getTitle()))
+                .andExpect(content().json("[]"));
+        mvc.perform(get("/api/todos/{id}", todo.getId())).andExpect(status().isNotFound());
+        for (String trash : List.of("", "0", "true", "2")) {
+            mvc.perform(get("/todos").param("keyword", todo.getTitle()).param("trash", trash)
+                    .param("showCompleted", "true"))
+                    .andExpect(model().attribute("todos", org.hamcrest.Matchers.empty()));
+        }
+        mvc.perform(get("/todos").param("keyword", todo.getTitle()).param("trash", "1"))
+                .andExpect(model().attribute("todos", org.hamcrest.Matchers.hasSize(1)))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("戻す")));
+        todo.setTitle(todo.getTitle() + "-changed");
+        mapper.update(todo);
+        assertEquals(1, mapper.countTrash(todo.getTitle().replace("-changed", ""), ""));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .post("/todos/{id}/restore", todo.getId()).param("trash", "1"))
+                .andExpect(redirectedUrl("/todos?trash=1"));
+        assertNull(jdbc.queryForObject("SELECT deleted_at FROM todos WHERE id = ?",
+                LocalDateTime.class, todo.getId()));
+        assertNotNull(tools.getTodo(todo.getId()));
+        assertEquals(0, mapper.countTrash(todo.getTitle().replace("-changed", ""), ""));
+    }
 
     @Test
     @Transactional

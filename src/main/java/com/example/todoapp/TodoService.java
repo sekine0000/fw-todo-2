@@ -47,6 +47,19 @@ public class TodoService {
         log.info("登録: id={}", todo.getId());
     }
 
+    public long countTrash(String keyword, String category) {
+        return todoMapper.countTrash(keyword, category);
+    }
+
+    public List<Todo> searchTrashPage(String keyword, String category, String order, long offset) {
+        return todoMapper.searchTrashPage(keyword, category, order, offset);
+    }
+
+    public void restore(Long id) {
+        todoMapper.restoreById(id);
+        log.info("復元: id={}", id);
+    }
+
     public void update(Todo todo) {
         todoMapper.update(todo);
         log.info("編集: id={}", todo.getId());

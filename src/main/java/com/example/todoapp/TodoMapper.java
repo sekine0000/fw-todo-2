@@ -27,4 +27,11 @@ public interface TodoMapper {
     void update(Todo todo);
 
     void deleteById(Long id);
+
+    long countTrash(@Param("keyword") String keyword, @Param("category") String category);
+
+    List<Todo> searchTrashPage(@Param("keyword") String keyword, @Param("category") String category,
+            @Param("order") String order, @Param("offset") long offset);
+
+    void restoreById(Long id);
 }

@@ -4,6 +4,7 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.todoapp.TodoMapper">
     <sql id="listConditions">
+        AND deleted_at IS NULL
         <if test="!showCompleted">
             AND completed = FALSE
         </if>
@@ -51,7 +52,7 @@
     <select id="findById" resultType="com.example.todoapp.Todo">
         SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos
-        WHERE id = #{id}
+        WHERE id = #{id} AND deleted_at IS NULL
     </select>
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO todos (title, detail, category, priority, due_date, completed)
@@ -70,10 +71,36 @@
                 ELSE completed_at
             END,
             completed = #{completed}
-        WHERE id = #{id}
+        WHERE id = #{id} AND deleted_at IS NULL
     </update>
-    <delete id="deleteById">
-        DELETE FROM todos
-        WHERE id = #{id}
-    </delete>
+    <update id="deleteById">
+        UPDATE todos SET deleted_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND deleted_at IS NULL
+    </update>
+    <sql id="trashConditions">
+        deleted_at IS NOT NULL
+        <if test="keyword != null and keyword != ''">
+            AND title LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="category != null and category != ''">
+            AND category = #{category}
+        </if>
+    </sql>
+    <select id="countTrash" resultType="long">
+        SELECT COUNT(*) FROM todos WHERE <include refid="trashConditions" />
+    </select>
+    <select id="searchTrashPage" resultType="com.example.todoapp.Todo">
+        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
+        FROM todos WHERE <include refid="trashConditions" />
+        ORDER BY due_date
+        <choose>
+            <when test="order == 'desc'">DESC</when>
+            <otherwise>ASC</otherwise>
+        </choose>
+        , id ASC LIMIT 10 OFFSET #{offset}
+    </select>
+    <update id="restoreById">
+        UPDATE todos SET deleted_at = NULL
+        WHERE id = #{id} AND deleted_at IS NOT NULL
+    </update>
 </mapper>

@@ -32,13 +32,19 @@ public class HomeController {
             @RequestParam(defaultValue = "") String category,
             @RequestParam(defaultValue = "asc") String order,
             @RequestParam(defaultValue = "false") boolean showCompleted,
-            @RequestParam(defaultValue = "1") int page, Model model) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "") String trash, Model model) {
+        boolean showTrash = "1".equals(trash);
         String selectedOrder = "desc".equals(order) ? "desc" : "asc";
-        long total = todoService.count(keyword, category, showCompleted);
+        long total = showTrash ? todoService.countTrash(keyword, category)
+                : todoService.count(keyword, category, showCompleted);
         long totalPages = Math.max(1, (total + 9) / 10);
         long currentPage = Math.min(Math.max(1, page), totalPages);
 
-        model.addAttribute("todos", todoService.searchPage(keyword, category, selectedOrder, showCompleted,
+        model.addAttribute("trash", showTrash);
+        model.addAttribute("todos", showTrash
+                ? todoService.searchTrashPage(keyword, category, selectedOrder, (currentPage - 1) * 10)
+                : todoService.searchPage(keyword, category, selectedOrder, showCompleted,
                 (currentPage - 1) * 10));
         model.addAttribute("currentPage", currentPage);
         model.addAttribute("totalPages", totalPages);
@@ -135,5 +141,12 @@ public class HomeController {
         todoService.delete(id);
         redirectAttributes.addFlashAttribute("message", "削除しました");
         return "redirect:/todos";
+    }
+
+    @PostMapping(value = "/todos/{id}/restore", params = "trash=1")
+    public String restore(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        todoService.restore(id);
+        redirectAttributes.addFlashAttribute("message", "戻しました");
+        return "redirect:/todos?trash=1";
     }
 }
