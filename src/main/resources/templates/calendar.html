@@ -39,8 +39,39 @@
                 </tr>
             </tbody>
         </table>
+        <p>現在地の天気（予報のある日のみ）・天気データ：<a href="https://open-meteo.com/">Open-Meteo</a></p>
     </main>
     <script>
+        function loadWeather() {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(async position => {
+                const table = document.querySelector('.calendar-table');
+                const params = new URLSearchParams({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    from: table.dataset.from,
+                    to: table.dataset.to
+                });
+                try {
+                    const res = await fetch(`/api/weather?${params}`, { signal: AbortSignal.timeout(12000) });
+                    if (!res.ok || res.headers.has('X-Weather-Unavailable')) return;
+                    const weather = await res.json();
+                    if (!weather || typeof weather !== 'object') return;
+                    for (const cell of table.querySelectorAll('td[data-date]')) {
+                        if (!Object.prototype.hasOwnProperty.call(weather, cell.dataset.date)
+                                || typeof weather[cell.dataset.date] !== 'string') continue;
+                        const text = document.createElement('div');
+                        text.textContent = weather[cell.dataset.date];
+                        cell.appendChild(text);
+                    }
+                } catch (error) {
+                    // 天気の通信に失敗しても、描画済みのカレンダーはそのまま残す。
+                }
+            }, () => {
+                // 現在地の取得失敗・許可しない場合は、天気だけ省略する。
+            }, { timeout: 10000, maximumAge: 300000 });
+        }
+
         async function loadHolidays(table, params) {
             const cells = table.querySelectorAll('td[data-date]');
             for (const cell of cells) {
@@ -121,6 +152,7 @@
         }
 
         loadTodos();
+        loadWeather();
     </script>
 </body>
 </html>
