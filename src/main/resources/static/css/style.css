@@ -42,6 +42,10 @@ body {
     font-weight: bold;
 }
 
+.todo-table tbody tr.todo-overdue {
+    background-color: #fee2e2;
+}
+
 .priority-mark {
     color: #B91C1C;
     font-weight: bold;
