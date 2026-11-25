@@ -25,6 +25,31 @@ class TodoappApplicationTests {
 
     @Test
     @Transactional
+    void pinnedTodosStayFirstInBothOrdersAndToggleOff() {
+        String keyword = "pin-test-" + System.nanoTime();
+        var ids = new java.util.ArrayList<Long>();
+        for (int day = 1; day <= 4; day++) {
+            Todo todo = new Todo();
+            todo.setTitle(keyword + day);
+            todo.setCategory("プログラミング");
+            todo.setPriority(2);
+            todo.setDueDate(LocalDate.of(2026, 11, day));
+            mapper.insert(todo);
+            ids.add(todo.getId());
+        }
+        mapper.togglePinned(ids.get(1));
+        mapper.togglePinned(ids.get(3));
+        assertEquals(List.of(ids.get(1), ids.get(3), ids.get(0), ids.get(2)),
+                mapper.searchPage(keyword, "", "asc", true, 0).stream().map(Todo::getId).toList());
+        assertEquals(List.of(ids.get(3), ids.get(1), ids.get(2), ids.get(0)),
+                mapper.searchPage(keyword, "", "desc", true, 0).stream().map(Todo::getId).toList());
+        mapper.togglePinned(ids.get(3));
+        assertEquals(ids.get(1), mapper.searchPage(keyword, "", "desc", true, 0).getFirst().getId());
+        assertFalse(mapper.searchPage(keyword, "", "asc", true, 0).getLast().getPinned());
+    }
+
+    @Test
+    @Transactional
     void deletedTodoIsHiddenEverywhereAndCanBeRestored() throws Exception {
         Todo todo = new Todo();
         todo.setTitle("trash-test-" + System.nanoTime());

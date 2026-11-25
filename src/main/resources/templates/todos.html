@@ -75,6 +75,15 @@
                               th:text="${#temporals.format(todo.completedAt, 'yyyy-MM-dd')}"></span>
                     </td>
                     <td>
+                        <form th:unless="${trash}" method="post" th:action="@{/todos/{id}/pin(id=${todo.id})}">
+                            <input type="hidden" name="keyword" th:value="${keyword}">
+                            <input type="hidden" name="category" th:value="${category}">
+                            <input type="hidden" name="order" th:value="${order}">
+                            <input type="hidden" name="showCompleted" th:value="${showCompleted}">
+                            <input type="hidden" name="page" th:value="${currentPage}">
+                            <button class="btn" type="submit" th:attr="aria-pressed=${todo.pinned}"
+                                    th:text="${todo.pinned ? '印を外す' : '印を付ける'}">印を付ける</button>
+                        </form>
                         <a class="link" th:unless="${trash}" th:href="@{/todos/{id}/edit(id=${todo.id})}">編集</a>
                         <a class="link" th:unless="${trash}" th:href="@{/todos/{id}/delete(id=${todo.id})}">削除</a>
                         <form th:if="${trash}" method="post" th:action="@{/todos/{id}/restore(id=${todo.id}, trash=1)}">

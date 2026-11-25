@@ -61,6 +61,23 @@ public class HomeController {
         return "create";
     }
 
+    @PostMapping("/todos/{id}/pin")
+    public String togglePinned(@PathVariable Long id,
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "") String category,
+            @RequestParam(defaultValue = "asc") String order,
+            @RequestParam(defaultValue = "false") boolean showCompleted,
+            @RequestParam(defaultValue = "1") int page,
+            RedirectAttributes redirectAttributes) {
+        todoService.togglePinned(id);
+        redirectAttributes.addAttribute("keyword", keyword);
+        redirectAttributes.addAttribute("category", category);
+        redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");
+        redirectAttributes.addAttribute("showCompleted", showCompleted);
+        redirectAttributes.addAttribute("page", page);
+        return "redirect:/todos";
+    }
+
     @PostMapping("/todos/confirm")
     public String confirm(@Valid @ModelAttribute Todo todo, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {

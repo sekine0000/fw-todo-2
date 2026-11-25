@@ -26,6 +26,8 @@ public interface TodoMapper {
 
     void update(Todo todo);
 
+    void togglePinned(Long id);
+
     void deleteById(Long id);
 
     long countTrash(@Param("keyword") String keyword, @Param("category") String category);

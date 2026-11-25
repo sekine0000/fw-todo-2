@@ -69,4 +69,8 @@ public class TodoService {
         todoMapper.deleteById(id);
         log.info("削除: id={}", id);
     }
+
+    public void togglePinned(Long id) {
+        todoMapper.togglePinned(id);
+    }
 }

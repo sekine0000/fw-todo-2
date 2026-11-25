@@ -17,6 +17,43 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class CalendarControllerTests {
+    @Test
+    void pinTogglePreservesListConditions() throws Exception {
+        TodoService service = org.mockito.Mockito.mock(TodoService.class);
+        var listMvc = MockMvcBuilders.standaloneSetup(new HomeController(service)).build();
+        listMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .post("/todos/42/pin")
+                .characterEncoding("UTF-8")
+                .param("keyword", "調べる & 確認")
+                .param("category", "プログラミング")
+                .param("order", "desc").param("showCompleted", "true").param("page", "2"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/todos?keyword="
+                        + java.net.URLEncoder.encode("調べる & 確認", StandardCharsets.UTF_8)
+                        + "&category=" + java.net.URLEncoder.encode("プログラミング", StandardCharsets.UTF_8)
+                        + "&order=desc&showCompleted=true&page=2"));
+        org.mockito.Mockito.verify(service).togglePinned(42L);
+    }
+
+    @Test
+    void pinnedOrderPrecedesBothDueDateOrders() throws Exception {
+        var configuration = new org.apache.ibatis.session.Configuration();
+        try (var xml = getClass().getResourceAsStream("/mapper/TodoMapper.xml")) {
+            new org.apache.ibatis.builder.xml.XMLMapperBuilder(xml, configuration,
+                    "mapper/TodoMapper.xml", configuration.getSqlFragments()).parse();
+        }
+        for (String order : java.util.List.of("asc", "desc")) {
+            var params = new java.util.HashMap<String, Object>();
+            params.put("order", order);
+            params.put("showCompleted", true);
+            params.put("offset", 0L);
+            String sql = configuration.getMappedStatement("com.example.todoapp.TodoMapper.searchPage")
+                    .getBoundSql(params).getSql().replaceAll("\\s+", " ");
+            org.junit.jupiter.api.Assertions.assertTrue(sql.contains(
+                    "ORDER BY pinned DESC, due_date " + order.toUpperCase() + " , id ASC LIMIT 10"), sql);
+        }
+    }
+
     private MockMvc mvc;
 
     // Inspect the main element so HTML void elements in the head need no XML conversion.

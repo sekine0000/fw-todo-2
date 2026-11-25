@@ -20,10 +20,10 @@
         <where><include refid="listConditions" /></where>
     </select>
     <select id="searchPage" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
+        SELECT id, title, detail, category, priority, due_date, completed, pinned, completed_at, created_at, updated_at
         FROM todos
         <where><include refid="listConditions" /></where>
-        ORDER BY due_date
+        ORDER BY pinned DESC, due_date
         <choose>
             <when test="order == 'desc'">DESC</when>
             <otherwise>ASC</otherwise>
@@ -75,6 +75,10 @@
     </update>
     <update id="deleteById">
         UPDATE todos SET deleted_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND deleted_at IS NULL
+    </update>
+    <update id="togglePinned">
+        UPDATE todos SET pinned = NOT pinned
         WHERE id = #{id} AND deleted_at IS NULL
     </update>
     <sql id="trashConditions">
