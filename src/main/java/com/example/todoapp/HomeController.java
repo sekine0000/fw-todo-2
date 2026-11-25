@@ -30,13 +30,15 @@ public class HomeController {
     @GetMapping("/todos")
     public String todos(@RequestParam(defaultValue = "") String keyword,
             @RequestParam(defaultValue = "") String category,
-            @RequestParam(defaultValue = "asc") String order, Model model) {
+            @RequestParam(defaultValue = "asc") String order,
+            @RequestParam(defaultValue = "false") boolean showCompleted, Model model) {
         String selectedOrder = "desc".equals(order) ? "desc" : "asc";
 
-        model.addAttribute("todos", todoService.search(keyword, category, selectedOrder));
+        model.addAttribute("todos", todoService.search(keyword, category, selectedOrder, showCompleted));
         model.addAttribute("keyword", keyword);
         model.addAttribute("category", category);
         model.addAttribute("order", selectedOrder);
+        model.addAttribute("showCompleted", showCompleted);
         return "todos";
     }
 

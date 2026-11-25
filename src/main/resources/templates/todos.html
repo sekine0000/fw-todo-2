@@ -34,10 +34,14 @@
             </div>
 
             <input name="order" type="hidden" th:value="${order}">
+            <label for="showCompleted">
+                <input id="showCompleted" name="showCompleted" type="checkbox" value="true" th:checked="${showCompleted}">
+                完了したものも表示する
+            </label>
             <button class="btn" type="submit">絞り込む</button>
 
-            <a class="link" th:href="@{/todos(keyword=${keyword}, category=${category}, order='asc')}">期限が近い順</a>
-            <a class="link" th:href="@{/todos(keyword=${keyword}, category=${category}, order='desc')}">期限が遠い順</a>
+            <a class="link" th:href="@{/todos(keyword=${keyword}, category=${category}, order='asc', showCompleted=${showCompleted})}">期限が近い順</a>
+            <a class="link" th:href="@{/todos(keyword=${keyword}, category=${category}, order='desc', showCompleted=${showCompleted})}">期限が遠い順</a>
         </form>
 
         <p th:if="${#lists.isEmpty(todos)}">まだ1件も登録されていません</p>

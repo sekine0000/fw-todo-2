@@ -22,7 +22,11 @@ public class TodoService {
     }
 
     public List<Todo> search(String keyword, String category, String order, LocalDate from, LocalDate to) {
-        return todoMapper.search(keyword, category, order, from, to);
+        return todoMapper.search(keyword, category, order, from, to, true);
+    }
+
+    public List<Todo> search(String keyword, String category, String order, boolean showCompleted) {
+        return todoMapper.search(keyword, category, order, null, null, showCompleted);
     }
 
     public Todo findById(Long id) {
