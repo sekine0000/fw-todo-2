@@ -8,6 +8,7 @@ import org.springframework.web.context.WebApplicationContext;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,6 +20,64 @@ class TodoappApplicationTests {
 
     @Autowired WebApplicationContext context;
     @Autowired TodoMapper mapper;
+
+    @Test
+    @Transactional
+    void completionDateFollowsStateChangesAndAppearsInListAndApi() throws Exception {
+        Todo todo = new Todo();
+        todo.setTitle("completion-test-" + System.nanoTime());
+        todo.setCategory("プログラミング");
+        todo.setPriority(2);
+        todo.setCompleted(false);
+        todo.setCompletedAt(LocalDateTime.of(2000, 1, 1, 0, 0));
+        mapper.insert(todo);
+        assertNull(mapper.findById(todo.getId()).getCompletedAt());
+
+        todo.setTitle(todo.getTitle() + "-edited");
+        mapper.update(todo);
+        assertNull(mapper.findById(todo.getId()).getCompletedAt());
+
+        LocalDateTime before = LocalDateTime.now().minusSeconds(2);
+        todo.setCompleted(true);
+        mapper.update(todo);
+        LocalDateTime completedAt = mapper.findById(todo.getId()).getCompletedAt();
+        assertNotNull(completedAt);
+        assertFalse(completedAt.isBefore(before));
+        assertFalse(completedAt.isAfter(LocalDateTime.now().plusSeconds(2)));
+
+        todo.setTitle(todo.getTitle() + "-completed-edit");
+        mapper.update(todo);
+        assertEquals(completedAt, mapper.findById(todo.getId()).getCompletedAt());
+
+        var mvc = MockMvcBuilders.webAppContextSetup(context).build();
+        mvc.perform(get("/todos").param("keyword", todo.getTitle()).param("showCompleted", "true"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(completedAt.toLocalDate().toString())));
+        mvc.perform(get("/api/todos").param("keyword", todo.getTitle()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].completedAt").isNotEmpty());
+
+        todo.setCompleted(false);
+        mapper.update(todo);
+        assertNull(mapper.findById(todo.getId()).getCompletedAt());
+        mvc.perform(get("/api/todos/{id}", todo.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.completedAt").value(org.hamcrest.Matchers.nullValue()));
+
+        todo.setCompleted(true);
+        mapper.update(todo);
+        assertNotNull(mapper.findById(todo.getId()).getCompletedAt());
+
+        Todo createdCompleted = new Todo();
+        createdCompleted.setTitle("created-completed-test");
+        createdCompleted.setCategory("デザイン");
+        createdCompleted.setPriority(2);
+        createdCompleted.setCompleted(true);
+        mapper.insert(createdCompleted);
+        assertNull(mapper.findById(createdCompleted.getId()).getCompletedAt());
+        mapper.update(createdCompleted);
+        assertNull(mapper.findById(createdCompleted.getId()).getCompletedAt());
+    }
 
     @Test
     @Transactional

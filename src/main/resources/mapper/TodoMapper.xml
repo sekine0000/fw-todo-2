@@ -19,7 +19,7 @@
         <where><include refid="listConditions" /></where>
     </select>
     <select id="searchPage" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, created_at, updated_at
+        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos
         <where><include refid="listConditions" /></where>
         ORDER BY due_date
@@ -31,7 +31,7 @@
         LIMIT 10 OFFSET #{offset}
     </select>
     <select id="search" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, created_at, updated_at
+        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos
         <where>
             <include refid="listConditions" />
@@ -49,7 +49,7 @@
         </choose>
     </select>
     <select id="findById" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, created_at, updated_at
+        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos
         WHERE id = #{id}
     </select>
@@ -64,6 +64,11 @@
             category = #{category},
             priority = #{priority},
             due_date = #{dueDate},
+            completed_at = CASE
+                WHEN #{completed} = FALSE THEN NULL
+                WHEN completed = FALSE AND #{completed} = TRUE THEN CURRENT_TIMESTAMP
+                ELSE completed_at
+            END,
             completed = #{completed}
         WHERE id = #{id}
     </update>

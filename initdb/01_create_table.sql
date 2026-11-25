@@ -6,6 +6,7 @@ CREATE TABLE todos (
     priority INT NOT NULL DEFAULT 2,
     due_date DATE NULL,
     completed BOOLEAN NOT NULL DEFAULT FALSE,
+    completed_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
@@ -26,3 +27,6 @@ CREATE TABLE todos (
 ) ENGINE=InnoDB
   DEFAULT CHARACTER SET utf8mb4
   COLLATE utf8mb4_0900_ai_ci;
+
+INSERT INTO todos (title, detail, category, priority, due_date, completed, completed_at)
+VALUES ('ポートフォリオのワイヤーを描く', '', 'デザイン', 1, '2026-11-15', TRUE, '2026-04-05 00:00:00');
