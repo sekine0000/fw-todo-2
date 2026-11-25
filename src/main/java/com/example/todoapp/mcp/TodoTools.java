@@ -46,6 +46,7 @@ public class TodoTools {
         Todo todo = todoService.findById(id);
         return todo == null ? null : TodoDto.from(todo);
     }
+
     @McpTool(name = "add_todo", description = "やることを1件足す")
     public TodoDto addTodo(
             @McpToolParam(required = true) String title,
@@ -94,11 +95,16 @@ public class TodoTools {
         if (detail != null && detail.length() > 255) {
             throw new IllegalArgumentException("メモは255文字以内で入力してください");
         }
-        if (dueDate != null) todo.setDueDate(LocalDate.parse(dueDate));
-        if (title != null) todo.setTitle(title);
-        if (category != null) todo.setCategory(category);
-        if (priority != null) todo.setPriority(priority);
-        if (detail != null) todo.setDetail(detail);
+        if (dueDate != null)
+            todo.setDueDate(LocalDate.parse(dueDate));
+        if (title != null)
+            todo.setTitle(title);
+        if (category != null)
+            todo.setCategory(category);
+        if (priority != null)
+            todo.setPriority(priority);
+        if (detail != null)
+            todo.setDetail(detail);
         todoService.update(todo);
         return TodoDto.from(todoService.findById(id));
     }
