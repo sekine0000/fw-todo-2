@@ -3,6 +3,7 @@ package com.example.todoapp.mcp;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,30 @@ public class TodoTools {
     public TodoTools(TodoService todoService, HolidayClient holidayClient) {
         this.todoService = todoService;
         this.holidayClient = holidayClient;
+    }
+
+    @McpTool(name = "summarize_week", description = "期限が指定期間内にあるやることを数えて要約し、総件数・ジャンルごとの件数・期限切れの未完了件数を返す。開始日・終了日はYYYY-MM-DD形式で、両端を含む。省略した側は期間を制限しない。期限切れは今日より前の期限を指す。")
+    public TodoSummary summarizeWeek(
+            @McpToolParam(required = false) String from,
+            @McpToolParam(required = false) String to) {
+        LocalDate fromDate = from == null ? null : LocalDate.parse(from);
+        LocalDate toDate = to == null ? null : LocalDate.parse(to);
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw new IllegalArgumentException("開始日は終了日以前にしてください");
+        }
+        List<Todo> todos = todoService.search(null, null, "asc", fromDate, toDate);
+        Map<String, Long> byCategory = new java.util.TreeMap<>();
+        CATEGORIES.forEach(category -> byCategory.put(category, 0L));
+        todos.forEach(todo -> byCategory.merge(todo.getCategory(), 1L, Long::sum));
+        LocalDate today = LocalDate.now();
+        long overdueCount = todos.stream()
+                .filter(todo -> !Boolean.TRUE.equals(todo.getCompleted()))
+                .filter(todo -> todo.getDueDate() != null && todo.getDueDate().isBefore(today))
+                .count();
+        return new TodoSummary(todos.size(), byCategory, overdueCount);
+    }
+
+    public record TodoSummary(long totalCount, Map<String, Long> byCategory, long overdueCount) {
     }
 
     @McpTool(name = "list_todos", description = "やることの一覧を返す（期間・ジャンルで絞れる）")
