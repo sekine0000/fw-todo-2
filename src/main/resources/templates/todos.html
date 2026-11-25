@@ -57,7 +57,10 @@
                 <tr th:each="todo : ${todos}">
                     <td th:text="${todo.title}"></td>
                     <td th:text="${todo.category}"></td>
-                    <td th:text="${todo.priority == 1 ? '高' : (todo.priority == 2 ? '中' : (todo.priority == 3 ? '低' : ''))}"></td>
+                    <td>
+                        <span th:text="${todo.priority == 1 ? '高' : (todo.priority == 2 ? '中' : (todo.priority == 3 ? '低' : ''))}"></span>
+                        <span class="priority-mark" th:if="${todo.priority == 1}" aria-hidden="true">★</span>
+                    </td>
                     <td th:text="${todo.dueDate}"></td>
                     <td th:text="${todo.completed == true ? '完了' : '未完了'}"></td>
                     <td>
