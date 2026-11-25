@@ -69,3 +69,6 @@ Content-Type: application/json
   "priority": 3,
   "dueDate": "2026-12-12"
 }
+
+### 6. MCPの窓口を確かめる
+POST http://localhost:8080/mcp
