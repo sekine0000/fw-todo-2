@@ -33,6 +33,11 @@ public class TodoService {
         return todoMapper.findById(id);
     }
 
+    public List<Todo> searchCsv(String keyword, String category, String order,
+            boolean showCompleted, boolean trash) {
+        return todoMapper.searchCsv(keyword, category, order, showCompleted, trash);
+    }
+
     public long count(String keyword, String category, boolean showCompleted) {
         return todoMapper.count(keyword, category, showCompleted);
     }

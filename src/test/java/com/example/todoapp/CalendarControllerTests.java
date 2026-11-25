@@ -18,6 +18,36 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class CalendarControllerTests {
     @Test
+    void csvDownloadPreservesConditionsAndEscapesCells() throws Exception {
+        TodoService service = org.mockito.Mockito.mock(TodoService.class);
+        Todo todo = new Todo();
+        todo.setTitle("=SUM(1,2)\"日本語\"\n続き");
+        todo.setCategory("+ジャンル");
+        todo.setPriority(1);
+        todo.setCompleted(true);
+        todo.setCompletedAt(java.time.LocalDateTime.of(2026, 11, 25, 10, 0));
+        org.mockito.Mockito.when(service.searchCsv("日本語", "資格", "desc", true, false))
+                .thenReturn(java.util.List.of(todo));
+        var csvMvc = MockMvcBuilders.standaloneSetup(
+                new com.example.todoapp.api.TodoApiController(service)).build();
+        csvMvc.perform(get("/api/todos.csv").param("keyword", "日本語").param("category", "資格")
+                .param("order", "desc").param("showCompleted", "true"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"todos.csv\""))
+                .andExpect(content().contentType("text/csv;charset=UTF-8"))
+                .andExpect(content().bytes(("\uFEFF\"やること\",\"ジャンル\",\"優先度\",\"期限\",\"状態\"\r\n"
+                        + "\"'=SUM(1,2)\"\"日本語\"\"\n続き\",\"'+ジャンル\",\"高\",\"\",\"完了 2026-11-25\"\r\n")
+                        .getBytes(StandardCharsets.UTF_8)));
+        org.mockito.Mockito.when(service.searchCsv("", "", "asc", false, true))
+                .thenReturn(java.util.List.of());
+        csvMvc.perform(get("/api/todos.csv").param("trash", "1").param("order", "invalid"))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes("\uFEFF\"やること\",\"ジャンル\",\"優先度\",\"期限\",\"状態\"\r\n"
+                        .getBytes(StandardCharsets.UTF_8)));
+        org.mockito.Mockito.verify(service).searchCsv("", "", "asc", false, true);
+    }
+
+    @Test
     void pinTogglePreservesListConditions() throws Exception {
         TodoService service = org.mockito.Mockito.mock(TodoService.class);
         var listMvc = MockMvcBuilders.standaloneSetup(new HomeController(service)).build();

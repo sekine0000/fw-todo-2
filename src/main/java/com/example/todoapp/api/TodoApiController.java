@@ -1,6 +1,7 @@
 package com.example.todoapp.api;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,48 @@ public class TodoApiController {
         return todoService.search(keyword, category, order, from, to).stream()
                 .map(TodoDto::from)
                 .toList();
+    }
+
+    @GetMapping(value = "/api/todos.csv", produces = "text/csv;charset=UTF-8")
+    public ResponseEntity<byte[]> csv(
+            @RequestParam(name = "keyword", defaultValue = "") String keyword,
+            @RequestParam(name = "category", defaultValue = "") String category,
+            @RequestParam(name = "order", defaultValue = "asc") String order,
+            @RequestParam(name = "showCompleted", defaultValue = "false") boolean showCompleted,
+            @RequestParam(name = "trash", defaultValue = "") String trash) {
+        StringBuilder csv = new StringBuilder("\uFEFF");
+        appendCsvRow(csv, "やること", "ジャンル", "優先度", "期限", "状態");
+        for (Todo todo : todoService.searchCsv(keyword, category,
+                "desc".equals(order) ? "desc" : "asc", showCompleted, "1".equals(trash))) {
+            String priority = Integer.valueOf(1).equals(todo.getPriority()) ? "高"
+                    : Integer.valueOf(2).equals(todo.getPriority()) ? "中"
+                    : Integer.valueOf(3).equals(todo.getPriority()) ? "低" : "";
+            String state = Boolean.TRUE.equals(todo.getCompleted()) ? "完了" : "未完了";
+            if (Boolean.TRUE.equals(todo.getCompleted()) && todo.getCompletedAt() != null) {
+                state += " " + todo.getCompletedAt().toLocalDate();
+            }
+            appendCsvRow(csv, todo.getTitle(), todo.getCategory(), priority,
+                    todo.getDueDate() == null ? "" : todo.getDueDate().toString(), state);
+        }
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/csv;charset=UTF-8")
+                .header("Content-Disposition", "attachment; filename=\"todos.csv\"")
+                .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void appendCsvRow(StringBuilder csv, String... values) {
+        for (int i = 0; i < values.length; i++) {
+            if (i > 0) csv.append(',');
+            String value = values[i] == null ? "" : values[i];
+            // Guard spreadsheet formulas, including leading whitespace/control characters.
+            String leading = value.stripLeading();
+            if (!leading.isEmpty() && "=+-@".indexOf(leading.charAt(0)) >= 0
+                    || !value.isEmpty() && "\t\r\n".indexOf(value.charAt(0)) >= 0) {
+                value = "'" + value;
+            }
+            csv.append('"').append(value.replace("\"", "\"\"")).append('"');
+        }
+        csv.append("\r\n");
     }
 
     @GetMapping("/api/todos/{id}")

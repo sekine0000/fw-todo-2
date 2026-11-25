@@ -47,6 +47,8 @@
             <a class="link" th:href="@{/todos(keyword=${keyword}, category=${category}, order='desc', showCompleted=${showCompleted}, trash=${trash ? 1 : null})}">期限が遠い順</a>
         </form>
 
+        <a class="btn" th:href="@{/api/todos.csv(keyword=${keyword}, category=${category}, order=${order}, showCompleted=${showCompleted}, trash=${trash ? 1 : null})}">CSVを書き出す</a>
+
         <p th:if="${#lists.isEmpty(todos)}" th:text="${trash ? '削除済みのやることはありません' : 'まだ1件も登録されていません'}"></p>
 
         <table class="todo-table" th:unless="${#lists.isEmpty(todos)}">

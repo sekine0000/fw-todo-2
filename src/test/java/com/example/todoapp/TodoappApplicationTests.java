@@ -175,6 +175,11 @@ class TodoappApplicationTests {
         String html = first.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(html.contains("showCompleted=true&amp;page=2"));
         assertTrue(html.contains("order=desc"));
+        assertTrue(html.contains("/api/todos.csv?keyword="));
+        assertEquals(15, mapper.searchCsv(keyword, "プログラミング", "desc", true, false).size());
+        assertEquals(keyword + "15", mapper.searchCsv(keyword, "プログラミング", "desc", true, false).getFirst().getTitle());
+        assertEquals(14, mapper.searchCsv(keyword, "プログラミング", "asc", false, false).size());
+        assertEquals(0, mapper.searchCsv(keyword, "デザイン", "asc", true, false).size());
         assertTrue(html.contains("aria-current=\"page\""));
 
         var second = mvc.perform(get("/todos").param("keyword", keyword)

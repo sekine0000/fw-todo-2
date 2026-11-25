@@ -19,16 +19,32 @@
         SELECT COUNT(*) FROM todos
         <where><include refid="listConditions" /></where>
     </select>
-    <select id="searchPage" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, pinned, completed_at, created_at, updated_at
-        FROM todos
-        <where><include refid="listConditions" /></where>
+    <sql id="listOrder">
         ORDER BY pinned DESC, due_date
         <choose>
             <when test="order == 'desc'">DESC</when>
             <otherwise>ASC</otherwise>
         </choose>
         , id ASC
+    </sql>
+    <select id="searchCsv" resultType="com.example.todoapp.Todo">
+        SELECT title, category, priority, due_date, completed, completed_at FROM todos
+        <choose>
+            <when test="trash">
+                WHERE <include refid="trashConditions" />
+                <include refid="trashOrder" />
+            </when>
+            <otherwise>
+                <where><include refid="listConditions" /></where>
+                <include refid="listOrder" />
+            </otherwise>
+        </choose>
+    </select>
+    <select id="searchPage" resultType="com.example.todoapp.Todo">
+        SELECT id, title, detail, category, priority, due_date, completed, pinned, completed_at, created_at, updated_at
+        FROM todos
+        <where><include refid="listConditions" /></where>
+        <include refid="listOrder" />
         LIMIT 10 OFFSET #{offset}
     </select>
     <select id="search" resultType="com.example.todoapp.Todo">
@@ -93,15 +109,19 @@
     <select id="countTrash" resultType="long">
         SELECT COUNT(*) FROM todos WHERE <include refid="trashConditions" />
     </select>
-    <select id="searchTrashPage" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
-        FROM todos WHERE <include refid="trashConditions" />
+    <sql id="trashOrder">
         ORDER BY due_date
         <choose>
             <when test="order == 'desc'">DESC</when>
             <otherwise>ASC</otherwise>
         </choose>
-        , id ASC LIMIT 10 OFFSET #{offset}
+        , id ASC
+    </sql>
+    <select id="searchTrashPage" resultType="com.example.todoapp.Todo">
+        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
+        FROM todos WHERE <include refid="trashConditions" />
+        <include refid="trashOrder" />
+        LIMIT 10 OFFSET #{offset}
     </select>
     <update id="restoreById">
         UPDATE todos SET deleted_at = NULL
