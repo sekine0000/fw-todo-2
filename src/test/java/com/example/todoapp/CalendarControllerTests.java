@@ -144,9 +144,48 @@ class CalendarControllerTests {
     @Test
     void navigationCrossesYearBoundaries() throws Exception {
         mvc.perform(get("/calendar").param("year", "2026").param("month", "1"))
-                .andExpect(xpath("//nav/a[1]/@href").string("/calendar?year=2025&month=12"));
+                .andExpect(xpath("//nav/div[1]/a[1]/@href").string("/calendar?year=2025&month=12"));
         mvc.perform(get("/calendar").param("year", "2026").param("month", "12"))
-                .andExpect(xpath("//nav/a[2]/@href").string("/calendar?year=2027&month=1"));
+                .andExpect(xpath("//nav/div[1]/a[2]/@href").string("/calendar?year=2027&month=1"));
+    }
+
+    @Test
+    void weekCrossesYearBoundaryAndPreservesAnchorWhenSwitching() throws Exception {
+        mvc.perform(get("/calendar").param("view", "week").param("date", "2026-01-01"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//table/@data-from").string("2025-12-28"))
+                .andExpect(xpath("//table/@data-to").string("2026-01-03"))
+                .andExpect(xpath("//table/@data-view").string("week"))
+                .andExpect(xpath("//tbody/tr").nodeCount(1))
+                .andExpect(xpath("//td[@data-date]").nodeCount(7))
+                .andExpect(xpath("//tbody/tr/td[1]/span").string("12/28"))
+                .andExpect(xpath("//tbody/tr/td[7]/@data-date").string("2026-01-03"))
+                .andExpect(xpath("//nav/div[1]/a[1]/@href").string("/calendar?view=week&date=2025-12-25"))
+                .andExpect(xpath("//nav/div[1]/a[2]/@href").string("/calendar?view=week&date=2026-01-08"))
+                .andExpect(xpath("//a[text()='月表示']/@href").string("/calendar?view=month&date=2026-01-01"));
+        mvc.perform(get("/calendar").param("view", "month").param("date", "2026-01-01"))
+                .andExpect(xpath("//h1").string("2026年1月"))
+                .andExpect(xpath("//a[text()='週表示']/@href").string("/calendar?view=week&date=2026-01-01"));
+    }
+
+    @Test
+    void sundayAndSaturdayUseSameWeekIncludingLeapDay() throws Exception {
+        for (String date : java.util.List.of("2024-02-25", "2024-03-02")) {
+            mvc.perform(get("/calendar").param("view", "week").param("date", date))
+                    .andExpect(xpath("//table/@data-from").string("2024-02-25"))
+                    .andExpect(xpath("//table/@data-to").string("2024-03-02"))
+                    .andExpect(xpath("//td[@data-date='2024-02-29']").nodeCount(1));
+        }
+        mvc.perform(get("/calendar").param("view", "week").param("year", "2026").param("month", "4"))
+                .andExpect(xpath("//table/@data-from").string("2026-03-29"))
+                .andExpect(xpath("//table/@data-to").string("2026-04-04"));
+    }
+
+    @Test
+    void invalidViewOrDateReturnsBadRequest() throws Exception {
+        mvc.perform(get("/calendar").param("view", "day")).andExpect(status().isBadRequest());
+        mvc.perform(get("/calendar").param("view", "week").param("date", "2026-02-30"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

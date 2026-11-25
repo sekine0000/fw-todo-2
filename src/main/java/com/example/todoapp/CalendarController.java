@@ -18,12 +18,21 @@ public class CalendarController {
 
     @GetMapping("/calendar")
     public String calendar(@RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month, Model model) {
+            @RequestParam(required = false) Integer month,
+            @RequestParam(defaultValue = "month") String view,
+            @RequestParam(required = false) String date, Model model) {
+        if (!view.equals("month") && !view.equals("week")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "表示方法が正しくありません");
+        }
         YearMonth now = YearMonth.now();
         YearMonth selected;
+        LocalDate anchor;
         try {
             selected = YearMonth.of(year == null ? now.getYear() : year,
                     month == null ? now.getMonthValue() : month);
+            anchor = date == null ? (selected.equals(now) ? LocalDate.now() : selected.atDay(1))
+                    : LocalDate.parse(date);
+            if (date != null) selected = YearMonth.from(anchor);
         } catch (DateTimeException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "年月が正しくありません", exception);
         }
@@ -33,7 +42,15 @@ public class CalendarController {
         int offset = firstDay.getDayOfWeek().getValue() % 7;
         int cellCount = ((offset + selected.lengthOfMonth() + 6) / 7) * 7;
         List<List<LocalDate>> weeks = new ArrayList<>();
-        for (int index = 0; index < cellCount; index += 7) {
+        boolean weekView = view.equals("week");
+        if (weekView) {
+            // Sunday is 7 in Java; the remainder makes Sunday 0.
+            firstDay = anchor.minusDays(anchor.getDayOfWeek().getValue() % 7);
+            lastDay = firstDay.plusDays(6);
+            List<LocalDate> week = new ArrayList<>();
+            for (int day = 0; day < 7; day++) week.add(firstDay.plusDays(day));
+            weeks.add(week);
+        } else for (int index = 0; index < cellCount; index += 7) {
             List<LocalDate> week = new ArrayList<>();
             for (int column = 0; column < 7; column++) {
                 int day = index + column - offset + 1;
@@ -43,6 +60,12 @@ public class CalendarController {
         }
 
         model.addAttribute("year", selected.getYear());
+        model.addAttribute("weekView", weekView);
+        model.addAttribute("anchor", anchor);
+        model.addAttribute("previousWeek", anchor.minusWeeks(1));
+        model.addAttribute("nextWeek", anchor.plusWeeks(1));
+        model.addAttribute("calendarTitle", weekView ? firstDay + " ～ " + lastDay
+                : selected.getYear() + "年" + selected.getMonthValue() + "月");
         model.addAttribute("month", selected.getMonthValue());
         model.addAttribute("firstDay", firstDay);
         model.addAttribute("lastDay", lastDay);
