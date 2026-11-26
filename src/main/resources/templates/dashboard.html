@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ダッシュボード | ToDo</title>
+    <link rel="stylesheet" th:href="@{/css/style.css(v='20261126-2')}">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+<main class="container dashboard">
+    <nav aria-label="画面の移動"><a class="link" th:href="@{/todos}">タスク一覧</a> <a class="link" th:href="@{/calendar}">カレンダー</a></nav>
+    <h1 class="page-title">ダッシュボード</h1>
+    <p th:text="${today + ' 時点のタスク状況'}"></p>
+    <p>削除済み・アーカイブ済み・サブタスクを除いて集計しています。期限切れは、期限が今日より前の未完了タスクです。</p>
+    <section class="dashboard-stats" aria-label="タスク統計">
+        <article class="dashboard-card"><h2>全タスク数</h2><p class="stat-value" th:text="${summary.total}">0</p></article>
+        <article class="dashboard-card"><h2>完了数</h2><p class="stat-value stat-completed" th:text="${summary.completed}">0</p></article>
+        <article class="dashboard-card"><h2>未完了数</h2><p class="stat-value" th:text="${summary.incomplete}">0</p></article>
+        <article class="dashboard-card"><h2>期限切れ数</h2><p class="stat-value stat-overdue" th:text="${summary.overdue}">0</p></article>
+    </section>
+    <p th:if="${summary.total == 0}">タスクがありません。<a class="link" th:href="@{/todos/new}">タスクを登録する</a></p>
+    <p id="chart-error" role="status" hidden>グラフを読み込めませんでした。集計値は各カードと「集計データ」で確認できます。</p>
+    <noscript><p>グラフの表示にはJavaScriptが必要です。集計データは以下で確認できます。</p></noscript>
+    <div class="dashboard-charts">
+        <section class="dashboard-card">
+            <h2>直近7日間の完了数</h2>
+            <div class="chart-frame"><canvas id="daily-chart" role="img" aria-label="直近7日間の日別タスク完了数。集計データを参照してください。"></canvas></div>
+            <details><summary>集計データ</summary><table class="todo-table"><thead><tr><th>完了日</th><th>完了数</th></tr></thead><tbody><tr th:each="label, row : ${dailyLabels}"><td th:text="${label}"></td><td th:text="${dailyCounts[row.index]}"></td></tr></tbody></table></details>
+        </section>
+        <section class="dashboard-card">
+            <h2>ステータス別の割合</h2>
+            <div class="chart-frame"><canvas id="status-chart" role="img" aria-label="完了と未完了の割合。集計データを参照してください。"></canvas></div>
+            <details><summary>集計データ</summary><p th:text="${'完了：' + summary.completed + '件 / 未完了：' + summary.incomplete + '件'}"></p></details>
+        </section>
+        <section class="dashboard-card dashboard-wide">
+            <h2>カテゴリ別のタスク数</h2>
+            <div class="category-chart-scroll"><div class="chart-frame" id="category-frame"><canvas id="category-chart" role="img" aria-label="カテゴリ別のタスク数。集計データを参照してください。"></canvas></div></div>
+            <details><summary>集計データ</summary><p th:if="${categories.isEmpty()}">集計対象のタスクがありません。</p><table class="todo-table" th:unless="${categories.isEmpty()}"><thead><tr><th>カテゴリ</th><th>タスク数</th></tr></thead><tbody><tr th:each="category : ${categories}"><td th:text="${category.category}"></td><td th:text="${category.taskCount}"></td></tr></tbody></table></details>
+        </section>
+    </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    (() => {
+        const dailyLabels = /*[[${dailyLabels}]]*/ [];
+        const dailyCounts = /*[[${dailyCounts}]]*/ [];
+        const completed = /*[[${summary.completed}]]*/ 0;
+        const incomplete = /*[[${summary.incomplete}]]*/ 0;
+        const categories = /*[[${categories}]]*/ [];
+        if (typeof Chart === 'undefined') {
+            document.getElementById('chart-error').hidden = false;
+            return;
+        }
+        Chart.defaults.color = '#cbd5e1';
+        Chart.defaults.borderColor = '#334155';
+        const countAxis = {beginAtZero: true, ticks: {precision: 0}};
+        const options = {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}};
+        new Chart(document.getElementById('daily-chart'), {
+            type: 'bar',
+            data: {labels: dailyLabels, datasets: [{label: '完了数', data: dailyCounts, backgroundColor: '#38bdf8', borderRadius: 4}]},
+            options: {...options, scales: {y: countAxis}}
+        });
+        new Chart(document.getElementById('status-chart'), {
+            type: 'doughnut',
+            data: {labels: ['完了', '未完了'], datasets: [{data: [completed, incomplete], backgroundColor: ['#34d399', '#38bdf8'], borderWidth: 0}]},
+            options: {...options, cutout: '65%', plugins: {
+                legend: {position: 'bottom'},
+                tooltip: {callbacks: {label: context => {
+                    const total = completed + incomplete;
+                    return `${context.label}: ${context.raw}件 (${total ? (context.raw / total * 100).toFixed(1) : 0}%)`;
+                }}}
+            }}
+        });
+        document.getElementById('category-frame').style.height = `${Math.max(280, categories.length * 42)}px`;
+        new Chart(document.getElementById('category-chart'), {
+            type: 'bar',
+            data: {labels: categories.map(row => row.category), datasets: [{label: 'タスク数', data: categories.map(row => row.taskCount), backgroundColor: '#a78bfa', borderRadius: 4}]},
+            options: {...options, indexAxis: 'y', scales: {x: countAxis}}
+        });
+    })();
+</script>
+</body>
+</html>
