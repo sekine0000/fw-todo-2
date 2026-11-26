@@ -3,11 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
     <title>やること一覧</title>
-    <link rel="stylesheet" href="/css/style.css?v=20261126-1">
+    <link rel="stylesheet" th:href="@{/css/style.css(v='20261126-2')}">
 </head>
 <body>
     <div class="container">
+        <form id="quick-add-form" class="quick-add-bar" th:unless="${trash}"
+              th:action="@{/api/todo}" method="post" novalidate>
+            <label for="quick-title">タスクを追加</label>
+            <div class="quick-add-controls">
+                <input id="quick-title" class="form-input" name="title" type="text"
+                       placeholder="タイトルを入力してEnter" aria-describedby="quick-add-error" autocomplete="off">
+                <button class="btn" type="submit">追加</button>
+            </div>
+            <p id="quick-add-error" class="quick-add-error" role="alert" hidden></p>
+            <span id="quick-add-status" role="status" aria-live="polite"></span>
+        </form>
         <a th:href="@{/admin/audit-logs}">管理者向け監査ログ</a>
         <p class="flash" role="status" th:if="${message}" th:text="${message}"></p>
 
@@ -52,10 +65,10 @@
 
         <a class="btn" th:href="@{/api/todos.csv(keyword=${keyword}, category=${category}, order=${order}, showCompleted=${showCompleted}, trash=${trash ? 1 : null})}">CSVを書き出す</a>
 
-        <p th:if="${#lists.isEmpty(todos)}" th:text="${trash ? '削除済みのやることはありません' : 'まだ1件も登録されていません'}"></p>
+        <p id="todo-empty" th:if="${#lists.isEmpty(todos)}" th:text="${trash ? '削除済みのやることはありません' : 'まだ1件も登録されていません'}"></p>
 
         <form id="bulk-delete-form" method="post" th:action="@{/todos/bulk-delete}"
-              th:if="${!trash and !#lists.isEmpty(todos)}">
+              th:unless="${trash}">
             <input type="hidden" name="keyword" th:value="${keyword}">
             <input type="hidden" name="category" th:value="${category}">
             <input type="hidden" name="order" th:value="${order}">
@@ -73,7 +86,7 @@
 
         <p th:if="${!trash and order == 'manual'}">行をドラッグして並び替えできます（表示中のページ内）。</p>
         <p id="reorder-status" role="status" aria-live="polite"></p>
-        <table class="todo-table" th:unless="${#lists.isEmpty(todos)}">
+        <table class="todo-table" th:hidden="${#lists.isEmpty(todos)}">
             <thead>
                 <tr>
                     <th th:unless="${trash}">
@@ -138,16 +151,17 @@
         </nav>
     </div>
     <script th:src="@{/js/todo-reorder.js}" defer></script>
+    <script th:src="@{/js/todo-quick-add.js}" defer></script>
     <script>
         const bulkDeleteForm = document.getElementById('bulk-delete-form');
         if (bulkDeleteForm) {
             const selectAll = document.getElementById('select-all');
-            const checkboxes = [...document.querySelectorAll('.todo-select')];
+            const checkboxes = () => [...document.querySelectorAll('.todo-select')];
             const deleteButton = document.getElementById('bulk-delete-button');
             const updateSelection = () => {
-                const count = checkboxes.filter(checkbox => checkbox.checked).length;
-                selectAll.checked = count === checkboxes.length;
-                selectAll.indeterminate = count > 0 && count < checkboxes.length;
+                const count = checkboxes().filter(checkbox => checkbox.checked).length;
+                selectAll.checked = count === checkboxes().length;
+                selectAll.indeterminate = count > 0 && count < checkboxes().length;
                 deleteButton.disabled = count === 0;
                 document.getElementById('selection-count').textContent = `${count}件選択中`;
                 document.querySelectorAll('.bulk-status-button').forEach(button => {
@@ -155,12 +169,13 @@
                 });
             };
             selectAll.addEventListener('change', () => {
-                checkboxes.forEach(checkbox => { checkbox.checked = selectAll.checked; });
+                checkboxes().forEach(checkbox => { checkbox.checked = selectAll.checked; });
                 updateSelection();
             });
-            checkboxes.forEach(checkbox => checkbox.addEventListener('change', updateSelection));
+            document.getElementById('todo-rows').addEventListener('change', updateSelection);
+            document.addEventListener('todo:added', updateSelection);
             bulkDeleteForm.addEventListener('submit', event => {
-                const count = checkboxes.filter(checkbox => checkbox.checked).length;
+                const count = checkboxes().filter(checkbox => checkbox.checked).length;
                 if (count === 0 || (event.submitter === deleteButton
                         && !window.confirm(`選択した${count}件を削除しますか？`))) {
                     event.preventDefault();

@@ -37,6 +37,23 @@ import jakarta.validation.Valid;
  */
 @RestController
 public class TodoApiController {
+    public record QuickCreateRequest(
+            @jakarta.validation.constraints.NotBlank(message = "タイトルを入力してください")
+            @jakarta.validation.constraints.Size(max = 255, message = "タイトルは255文字以内で入力してください")
+            String title) {}
+
+    @PostMapping("/api/todo")
+    public ResponseEntity<TodoDto> quickCreate(@Valid @RequestBody QuickCreateRequest request) {
+        Todo todo = new Todo();
+        todo.setTitle(request.title().strip());
+        todo.setCategory("デザイン");
+        todo.setPriority(2);
+        todo.setCompleted(false);
+        todoService.create(todo);
+        return ResponseEntity.created(URI.create("/api/todos/" + todo.getId()))
+                .body(TodoDto.from(todoService.findById(todo.getId())));
+    }
+
     public record ReorderRequest(List<Long> ids) {}
 
     @PutMapping("/api/todo/reorder")

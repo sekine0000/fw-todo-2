@@ -91,6 +91,24 @@ class TransactionTests {
     @AfterEach
     void tearDown() { if (context != null) context.close(); }
 
+    @Test
+    void quickCreatePersistsWithProductionCategoryConstraint() throws Exception {
+        String schema = java.nio.file.Files.readString(java.nio.file.Path.of("initdb/01_create_table.sql"));
+        var constraint = java.util.regex.Pattern.compile(
+                "(?s)CONSTRAINT chk_todos_category CHECK \\(.*?\\n    \\)").matcher(schema);
+        assertThat(constraint.find()).isTrue();
+        // H2's IN constraint retains its creating session; keep it open for this check.
+        try (var connection = jdbc.getDataSource().getConnection(); var statement = connection.createStatement()) {
+            statement.execute("ALTER TABLE todos ADD " + constraint.group());
+            var controller = new com.example.todoapp.api.TodoApiController(service);
+            var response = controller.quickCreate(new com.example.todoapp.api.TodoApiController.QuickCreateRequest(" quick task "));
+            assertThat(response.getStatusCode().value()).isEqualTo(201);
+            assertThat(response.getBody().getTitle()).isEqualTo("quick task");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM todos WHERE id = ?", Integer.class,
+                    response.getBody().getId())).isEqualTo(1);
+        }
+    }
+
     private Todo todo() {
         var todo = new Todo();
         todo.setTitle("transaction test");

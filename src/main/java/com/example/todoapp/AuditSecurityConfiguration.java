@@ -26,6 +26,9 @@ public class AuditSecurityConfiguration {
         // Existing public API/MCP clients have no CSRF tokens. Still load the login session
         // so ToDo changes made by signed-in users carry their identity in the audit log.
         return http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                .csrf(csrf -> csrf.disable()).build();
+                .csrf(csrf -> csrf.requireCsrfProtectionMatcher(request ->
+                        "POST".equals(request.getMethod())
+                                && (request.getContextPath() + "/api/todo").equals(request.getRequestURI())))
+                .build();
     }
 }
