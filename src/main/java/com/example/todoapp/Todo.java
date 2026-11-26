@@ -33,6 +33,7 @@ public class Todo {
 
     private Boolean completed;
     private Boolean pinned = false;
+    private LocalDateTime deletedAt;
     private LocalDateTime completedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

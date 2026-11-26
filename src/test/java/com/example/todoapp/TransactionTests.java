@@ -23,14 +23,16 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 class TransactionTests {
     @Configuration
-    @EnableTransactionManagement
+    @org.springframework.context.annotation.EnableAspectJAutoProxy
+    @EnableTransactionManagement(order = Integer.MAX_VALUE - 1)
     static class Config {}
 
     static class CheckedFailureService extends TodoService {
-        CheckedFailureService(TodoMapper todos, TodoHistoryMapper history, AuditLogService audit) {
-            super(todos, history, audit);
+        CheckedFailureService(TodoMapper todos, TodoHistoryMapper history) {
+            super(todos, history);
         }
 
+        @Auditable(action = "CREATE")
         public void createThenFail(Todo todo) throws IOException {
             super.create(todo);
             throw new IOException("checked failure after both inserts");
@@ -48,14 +50,20 @@ class TransactionTests {
         var ds = new DriverManagerDataSource("jdbc:h2:mem:" + System.nanoTime() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
         jdbc = new JdbcTemplate(ds);
         jdbc.execute("CREATE TABLE todos (id BIGINT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, detail VARCHAR(255), category VARCHAR(255), priority INT, due_date DATE, completed BOOLEAN)");
+        for (String column : java.util.List.of("pinned BOOLEAN DEFAULT FALSE", "deleted_at TIMESTAMP",
+                "completed_at TIMESTAMP", "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")) {
+            jdbc.execute("ALTER TABLE todos ADD " + column);
+        }
         jdbc.execute("CREATE TABLE todo_history (id BIGINT AUTO_INCREMENT PRIMARY KEY, todo_id BIGINT, operation VARCHAR(32))");
-        jdbc.execute("CREATE TABLE audit_log (id BIGINT AUTO_INCREMENT PRIMARY KEY, todo_id BIGINT, operation VARCHAR(32), event_type VARCHAR(32))");
+        jdbc.execute("CREATE TABLE audit_logs (id BIGINT AUTO_INCREMENT PRIMARY KEY, action VARCHAR(32), entity_type VARCHAR(64), entity_id BIGINT, user_id VARCHAR(255), old_value TEXT, new_value TEXT, ip_address VARCHAR(45), status VARCHAR(32), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
         var factory = new SqlSessionFactoryBean();
         factory.setDataSource(ds);
         factory.setMapperLocations(new ClassPathResource("mapper/TodoMapper.xml"));
         var sf = factory.getObject();
         sf.getConfiguration().addMapper(TodoHistoryMapper.class);
         sf.getConfiguration().addMapper(AuditLogMapper.class);
+        sf.getConfiguration().setMapUnderscoreToCamelCase(true);
         var template = new SqlSessionTemplate(sf);
         todos = spy(template.getMapper(TodoMapper.class));
         history = spy(template.getMapper(TodoHistoryMapper.class));
@@ -65,9 +73,9 @@ class TransactionTests {
         context.registerBean(TodoMapper.class, () -> todos);
         context.registerBean(TodoHistoryMapper.class, () -> history);
         context.registerBean(AuditLogMapper.class, () -> template.getMapper(AuditLogMapper.class));
-        context.register(AuditLogService.class, TodoService.class);
+        context.register(AuditLogService.class, TodoService.class, com.example.todoapp.aspect.AuditAspect.class);
         context.registerBean(CheckedFailureService.class, () -> new CheckedFailureService(
-                todos, history, context.getBean(AuditLogService.class)));
+                todos, history));
         context.refresh();
         service = context.getBean("todoService", TodoService.class);
     }
@@ -92,7 +100,7 @@ class TransactionTests {
         service.create(todo());
         assertThat(count("todos")).isEqualTo(1);
         assertThat(count("todo_history")).isEqualTo(1);
-        assertThat(count("audit_log")).isEqualTo(1);
+        assertThat(count("audit_logs")).isEqualTo(1);
     }
 
     @Test
@@ -103,18 +111,20 @@ class TransactionTests {
             throw new IllegalStateException("history failure");
         }).when(history).insert(anyLong(), anyString());
         assertThatThrownBy(() -> service.create(todo())).isInstanceOf(Exception.class);
+        assertThat(jdbc.queryForObject("SELECT status FROM audit_logs", String.class)).isEqualTo("ROLLED_BACK");
         assertThat(count("todos")).isZero();
         assertThat(count("todo_history")).isZero();
-        assertThat(count("audit_log")).isEqualTo(1);
+        assertThat(count("audit_logs")).isEqualTo(1);
     }
 
     @Test
     void checkedExceptionRollsBackBothInsertsButPreservesAudit() {
         assertThatThrownBy(() -> context.getBean(CheckedFailureService.class).createThenFail(todo()))
                 .isInstanceOf(IOException.class);
+        assertThat(jdbc.queryForObject("SELECT status FROM audit_logs", String.class)).isEqualTo("ROLLED_BACK");
         assertThat(count("todos")).isZero();
         assertThat(count("todo_history")).isZero();
-        assertThat(count("audit_log")).isEqualTo(1);
+        assertThat(count("audit_logs")).isEqualTo(1);
     }
 
     @Test
@@ -124,9 +134,45 @@ class TransactionTests {
             throw new IllegalStateException("todo insert failed");
         }).when(todos).insert(any(Todo.class));
         assertThatThrownBy(() -> service.create(todo())).isInstanceOf(RuntimeException.class);
+        assertThat(jdbc.queryForObject("SELECT status FROM audit_logs", String.class)).isEqualTo("ROLLED_BACK");
         assertThat(count("todos")).isZero();
         assertThat(count("todo_history")).isZero();
-        assertThat(count("audit_log")).isEqualTo(1);
+        assertThat(count("audit_logs")).isEqualTo(1);
+    }
+
+    @Test
+    void capturesSnapshotsIdentityAndBulkDeleteRestore() {
+        var authentication = org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+                .authenticated("audit-admin", "unused", java.util.List.of());
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(authentication);
+        var request = new org.springframework.mock.web.MockHttpServletRequest();
+        request.setRemoteAddr("192.0.2.10");
+        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(
+                new org.springframework.web.context.request.ServletRequestAttributes(request));
+        try {
+            Todo todo = todo();
+            service.create(todo);
+            todo.setTitle("changed title");
+            todo.setCompleted(true);
+            service.update(todo);
+            assertThat(jdbc.queryForObject("SELECT old_value FROM audit_logs WHERE action='UPDATE'", String.class))
+                    .contains("transaction test");
+            assertThat(jdbc.queryForObject("SELECT new_value FROM audit_logs WHERE action='UPDATE'", String.class))
+                    .contains("changed title");
+            assertThat(jdbc.queryForObject("SELECT user_id FROM audit_logs WHERE action='UPDATE'", String.class))
+                    .isEqualTo("audit-admin");
+            assertThat(jdbc.queryForObject("SELECT ip_address FROM audit_logs WHERE action='UPDATE'", String.class))
+                    .isEqualTo("192.0.2.10");
+            service.togglePinned(todo.getId());
+            service.deleteByIds(java.util.List.of(todo.getId(), todo.getId()));
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_logs WHERE action='DELETE'", Integer.class)).isEqualTo(1);
+            service.restore(todo.getId());
+            assertThat(todos.findById(todo.getId())).isNotNull();
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_logs WHERE status='SUCCESS'", Integer.class)).isEqualTo(5);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+            org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+        }
     }
 
     @Test

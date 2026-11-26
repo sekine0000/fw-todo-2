@@ -5,15 +5,16 @@
 検索・件数取得には `readOnly = true` を指定しています。
 
 監査ログは別Beanの `AuditLogService` が `REQUIRES_NEW` で更新処理前に保存します。
-`audit_log.event_type = ATTEMPT` は操作の試行を表し、成功の記録ではありません。
-新規作成の試行時点ではIDが未採番のため `todo_id` はNULLです。
+`audit_logs.status = ATTEMPT` は操作の試行を表し、成功の記録ではありません。
+新規作成の試行時点ではIDが未採番のため `entity_id` はNULLです（操作後に更新します）。
 監査保存が失敗した場合は本体の更新も開始しません。
 操作履歴は指定IDへの操作を記録し、対象が存在せず更新件数が0の場合も記録します。
 
 ## DBへの適用
 
-新規Docker DBでは `initdb/02_create_transaction_tables.sql` が初期化時に実行されます。
-既存DBでは同ファイルを対象DBに一度適用してからアプリを起動してください。
+新規Docker DBでは `initdb` 内のSQLが初期化時に実行されます。
+`02_create_transaction_tables.sql` と `03_create_audit_logs.sql` はアプリに同梱され、起動時に自動実行されます。
+`CREATE TABLE IF NOT EXISTS` のため既存の監査ログは保持されます。DBユーザーにはCREATE権限が必要です。
 既存のDockerボリュームには初期化SQLは自動で再適用されません。
 
 外側の処理中に別接続で監査を書き込むため、接続プールには同時実行数に加えて
@@ -26,3 +27,28 @@
 
 H2と実際のMyBatis・Springトランザクションプロキシを使い、コミット、
 本体/履歴の失敗、チェック例外、監査ログの残存、読み取り専用設定を検証します。
+## 監査ログ
+
+ToDoの登録・更新・削除・復元・ピン切替・一括削除は `@Auditable` と `AuditAspect` で記録する。
+`initdb/03_create_audit_logs.sql` はアプリ起動時にも実行し、既存DBへ監査テーブルを追加する。
+Dockerの初期化SQLは新規ボリューム作成時のみ実行されるため、アプリ側の初期化で既存ボリュームも扱う。
+旧 `audit_log` は互換用に残し、新しいログは `audit_logs` に保存する。
+
+記録の開始と終了は別Beanの `REQUIRES_NEW` を使用する。開始時に `ATTEMPT` を保存し、
+本体トランザクション内で変更前後をJSON化、確定後に `SUCCESS` または `ROLLED_BACK` に更新する。
+取り消された操作の変更後JSONは確定データではなく、操作直後の状態を表す。
+プロセス中断時は `ATTEMPT` が残る。ログテーブルにはToDoへの外部キーを付けない。
+コネクションプールには、本体処理に加え独立したログ保存用の接続が必要。
+
+管理画面は `/admin/audit-logs`。操作・対象ID・ユーザー名の完全一致で検索し、50件ずつ表示する。
+`ROLE_ADMIN` のみ閲覧できる。初期管理ユーザー名は `admin`（`AUDIT_ADMIN_USER` で変更可能）、
+パスワードはSpring Bootが起動時に生成する。本番では `SPRING_SECURITY_USER_PASSWORD` を設定する。
+Docker Composeでは `.env` の `AUDIT_ADMIN_USER` と `SPRING_SECURITY_USER_PASSWORD` がアプリに渡される。
+変更後は `docker compose up -d --build --force-recreate app` で反映する。
+パスワードを設定していない場合は起動ログの `Using generated security password:` を確認する。
+IDEやMavenから直接起動する場合は `.env` は自動で読み込まれないため、起動環境の環境変数に設定する。
+既存の公開ToDo/API/MCPのアクセス方式を維持し、ログイン済みの場合はSecurityContextのユーザー名を記録する。
+未認証・バックグラウンド処理のユーザーはNULL。IPはHTTPリクエストの直接の接続元を使用する。
+
+アノテーションはSpringプロキシを経由するサービスメソッドに付ける（同一Bean内の自己呼び出しは対象外）。
+現在のスナップショット取得はToDo専用で、引数にTodo・ID・IDリストを受け取るメソッドに対応する。

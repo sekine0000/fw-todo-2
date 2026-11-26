@@ -16,12 +16,12 @@ public class TodoService {
     private final TodoMapper todoMapper;
 
     private final TodoHistoryMapper historyMapper;
-    private final AuditLogService auditLogService;
 
-    public TodoService(TodoMapper todoMapper, TodoHistoryMapper historyMapper, AuditLogService auditLogService) {
+
+    public TodoService(TodoMapper todoMapper, TodoHistoryMapper historyMapper) {
         this.todoMapper = todoMapper;
         this.historyMapper = historyMapper;
-        this.auditLogService = auditLogService;
+
     }
 
     @Transactional(readOnly = true)
@@ -61,8 +61,8 @@ public class TodoService {
         return todoMapper.searchPage(keyword, category, order, showCompleted, offset);
     }
 
+    @Auditable(action = "CREATE")
     public void create(Todo todo) {
-        auditLogService.recordAttempt(null, "CREATE");
         todoMapper.insert(todo);
         historyMapper.insert(todo.getId(), "CREATE");
         log.info("登録: id={}", todo.getId());
@@ -78,40 +78,39 @@ public class TodoService {
         return todoMapper.searchTrashPage(keyword, category, order, offset);
     }
 
+    @Auditable(action = "RESTORE")
     public void restore(Long id) {
-        auditLogService.recordAttempt(id, "RESTORE");
         todoMapper.restoreById(id);
         historyMapper.insert(id, "RESTORE");
         log.info("復元: id={}", id);
     }
 
+    @Auditable(action = "UPDATE")
     public void update(Todo todo) {
-        auditLogService.recordAttempt(todo.getId(), "UPDATE");
         todoMapper.update(todo);
         historyMapper.insert(todo.getId(), "UPDATE");
         log.info("編集: id={}", todo.getId());
     }
 
+    @Auditable(action = "DELETE")
     public void delete(Long id) {
-        auditLogService.recordAttempt(id, "DELETE");
         todoMapper.deleteById(id);
         historyMapper.insert(id, "DELETE");
         log.info("削除: id={}", id);
     }
 
+    @Auditable(action = "TOGGLE_PINNED")
     public void togglePinned(Long id) {
-        auditLogService.recordAttempt(id, "TOGGLE_PINNED");
         todoMapper.togglePinned(id);
         historyMapper.insert(id, "TOGGLE_PINNED");
     }
 
+    @Auditable(action = "DELETE")
     public int deleteByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return 0;
         }
-        for (Long id : ids.stream().distinct().toList()) {
-            auditLogService.recordAttempt(id, "DELETE");
-        }
+
         int deleted = todoMapper.deleteByIds(ids);
         for (Long id : ids.stream().distinct().toList()) {
             historyMapper.insert(id, "DELETE");

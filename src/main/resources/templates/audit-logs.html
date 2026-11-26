@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>監査ログ</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><main>
+<h1>監査ログ</h1><a th:href="@{/todos}">ToDo一覧</a>
+<form method="get" th:action="@{/admin/audit-logs}">
+<label>操作 <select name="action"><option value="">すべて</option><option th:each="a : ${ {'CREATE','UPDATE','DELETE','RESTORE','TOGGLE_PINNED'} }" th:value="${a}" th:text="${a}" th:selected="${a == action}"></option></select></label>
+<label>対象ID <input name="entityId" type="number" th:value="${entityId}"></label>
+<label>ユーザー <input name="userId" th:value="${userId}"></label><button>検索</button>
+</form>
+<p>SUCCESS: 確定 / ROLLED_BACK: 取り消し / ATTEMPT: 処理中（または中断）。変更後JSONは操作直後の状態です。</p>
+<p th:if="${#lists.isEmpty(logs)}">該当する監査ログはありません。</p>
+<table th:unless="${#lists.isEmpty(logs)}"><thead><tr><th>日時</th><th>操作</th><th>対象</th><th>ユーザー</th><th>IP</th><th>結果</th><th>変更内容</th></tr></thead>
+<tbody><tr th:each="log : ${logs}"><td th:text="${log.createdAt}"></td><td th:text="${log.action}"></td><td><span th:text="${log.entityType}"></span> #<span th:text="${log.entityId}"></span></td><td th:text="${log.userId ?: '未認証 / システム'}"></td><td th:text="${log.ipAddress}"></td><td th:text="${log.status}"></td><td><details><summary>JSONを表示</summary><strong>変更前</strong><pre th:text="${log.oldValue}"></pre><strong>変更後</strong><pre th:text="${log.newValue}"></pre></details></td></tr></tbody></table>
+<nav><a th:if="${page > 1}" th:href="@{/admin/audit-logs(action=${action},entityId=${entityId},userId=${userId},page=${page - 1})}">前へ</a> <span th:text="${page}"></span> <a th:if="${hasNext}" th:href="@{/admin/audit-logs(action=${action},entityId=${entityId},userId=${userId},page=${page + 1})}">次へ</a></nav>
+</main></body></html>

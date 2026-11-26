@@ -8,6 +8,7 @@
 </head>
 <body>
     <div class="container">
+        <a th:href="@{/admin/audit-logs}">管理者向け監査ログ</a>
         <p class="flash" th:if="${message}" th:text="${message}"></p>
 
         <h1 class="page-title" th:text="${trash ? '削除済みのやること' : 'やること一覧'}">やること一覧</h1>

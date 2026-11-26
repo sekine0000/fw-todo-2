@@ -12,9 +12,15 @@ public class AuditLogService {
         this.mapper = mapper;
     }
 
-    // A separate bean ensures that Spring suspends the caller's transaction.
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public void recordAttempt(Long todoId, String operation) {
-        mapper.insert(todoId, operation);
+    public void record(AuditLog log) { mapper.insertLog(log); }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public void complete(AuditLog log) { mapper.complete(log); }
+
+    @Transactional(readOnly = true)
+    public java.util.List<AuditLog> search(String action, Long entityId, String userId, long offset) {
+        return mapper.search(action, entityId, userId, offset);
     }
+
 }

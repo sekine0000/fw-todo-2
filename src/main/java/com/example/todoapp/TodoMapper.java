@@ -18,6 +18,8 @@ public interface TodoMapper {
             @Param("showCompleted") boolean showCompleted);
 
     Todo findById(Long id);
+    @org.apache.ibatis.annotations.Select("SELECT * FROM todos WHERE id = #{id}")
+    Todo findForAudit(Long id);
 
     long count(@Param("keyword") String keyword, @Param("category") String category,
             @Param("showCompleted") boolean showCompleted);

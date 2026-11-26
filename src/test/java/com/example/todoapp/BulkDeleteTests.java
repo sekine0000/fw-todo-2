@@ -18,7 +18,7 @@ class BulkDeleteTests {
     void selectedIdsAreBoundAsListAndFiltersArePreserved() throws Exception {
         TodoMapper mapper = mock(TodoMapper.class);
         when(mapper.deleteByIds(List.of(12L, 34L))).thenReturn(2);
-        var mvc = MockMvcBuilders.standaloneSetup(new HomeController(new TodoService(mapper, org.mockito.Mockito.mock(com.example.todoapp.TodoHistoryMapper.class), org.mockito.Mockito.mock(com.example.todoapp.AuditLogService.class)))).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new HomeController(new TodoService(mapper, org.mockito.Mockito.mock(com.example.todoapp.TodoHistoryMapper.class)))).build();
         mvc.perform(post("/todos/bulk-delete").param("ids", "12", "34")
                 .param("keyword", "test").param("category", "work")
                 .param("order", "desc").param("showCompleted", "true").param("page", "2"))
@@ -31,7 +31,7 @@ class BulkDeleteTests {
     @Test
     void missingOrInvalidIdsNeverReachMapper() throws Exception {
         TodoMapper mapper = mock(TodoMapper.class);
-        TodoService service = new TodoService(mapper, org.mockito.Mockito.mock(com.example.todoapp.TodoHistoryMapper.class), org.mockito.Mockito.mock(com.example.todoapp.AuditLogService.class));
+        TodoService service = new TodoService(mapper, org.mockito.Mockito.mock(com.example.todoapp.TodoHistoryMapper.class));
         var mvc = MockMvcBuilders.standaloneSetup(new HomeController(service)).build();
         mvc.perform(post("/todos/bulk-delete")).andExpect(status().is3xxRedirection());
         mvc.perform(post("/todos/bulk-delete").param("ids", "invalid"))
