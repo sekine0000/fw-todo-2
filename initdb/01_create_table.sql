@@ -1,5 +1,6 @@
 CREATE TABLE todos (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    parent_id BIGINT UNSIGNED NULL,
     title VARCHAR(255) NOT NULL,
     detail VARCHAR(255) NULL,
     category VARCHAR(255) NOT NULL,
@@ -13,6 +14,8 @@ CREATE TABLE todos (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    INDEX idx_todos_parent_id (parent_id),
+    CONSTRAINT fk_todos_parent FOREIGN KEY (parent_id) REFERENCES todos(id) ON DELETE CASCADE,
     CONSTRAINT chk_todos_category CHECK (
         category IN (
             'デザイン',

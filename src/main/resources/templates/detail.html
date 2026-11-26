@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>やること詳細</title>
+    <link rel="stylesheet" th:href="@{/css/style.css?v=20261126-1}">
+</head>
+<body>
+<div class="container">
+    <h1 class="page-title" th:text="${todo.title}"></h1>
+    <p th:text="${todo.detail}"></p>
+    <p>ジャンル: <span th:text="${todo.category}"></span></p>
+    <p>期限: <span th:text="${todo.dueDate}"></span></p>
+    <p>状態: <span th:text="${todo.completed ? '完了' : '未完了'}"></span></p>
+    <a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}">編集</a>
+    <h2>サブタスク</h2>
+    <p th:text="|進捗率: ${progress}%（${completedCount}/${#lists.size(subtasks)}件完了）|"></p>
+    <progress max="100" th:value="${progress}" aria-label="サブタスクの進捗率"></progress>
+    <p th:if="${#lists.isEmpty(subtasks)}">サブタスクはありません。</p>
+    <ul>
+        <li th:each="child : ${subtasks}">
+            <span th:text="${child.title}"></span>
+            <span th:text="${child.completed ? '完了' : '未完了'}"></span>
+            <form method="post" th:action="@{/todos/{parentId}/subtasks/{id}/toggle(parentId=${todo.id},id=${child.id})}">
+                <button class="btn" type="submit" th:text="${child.completed ? '未完了に戻す' : '完了にする'}"></button>
+            </form>
+            <form method="post" th:action="@{/todos/{parentId}/subtasks/{id}/delete(parentId=${todo.id},id=${child.id})}">
+                <button class="btn" type="submit">削除</button>
+            </form>
+        </li>
+    </ul>
+    <form method="post" th:action="@{/todos/{id}/subtasks(id=${todo.id})}">
+        <label for="subtask-title">サブタスク名</label>
+        <input class="form-input" id="subtask-title" name="title" required maxlength="255">
+        <button class="btn" type="submit">追加</button>
+    </form>
+    <a class="link" th:href="@{/todos}">一覧に戻る</a>
+</div>
+</body>
+</html>

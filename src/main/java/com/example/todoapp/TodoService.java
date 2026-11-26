@@ -151,7 +151,9 @@ public class TodoService {
      */
     @Auditable(action = "CREATE")
     public void create(Todo todo) {
+        if (todo.getParentId() != null) lockParent(todo.getParentId());
         todoMapper.insert(todo);
+        if (todo.getParentId() != null) refreshParent(todo.getParentId());
         historyMapper.insert(todo.getId(), "CREATE");
         log.info("登録: id={}", todo.getId());
     }
@@ -192,7 +194,10 @@ public class TodoService {
      */
     @Auditable(action = "RESTORE")
     public void restore(Long id) {
+        Todo stored = todoMapper.findForAudit(id);
+        if (stored != null && stored.getParentId() != null) lockParent(stored.getParentId());
         todoMapper.restoreById(id);
+        if (stored != null && stored.getParentId() != null) refreshParent(stored.getParentId());
         historyMapper.insert(id, "RESTORE");
         log.info("復元: id={}", id);
     }
@@ -205,7 +210,17 @@ public class TodoService {
      */
     @Auditable(action = "UPDATE")
     public void update(Todo todo) {
+        Todo stored = todoMapper.findById(todo.getId());
+        if (stored != null) {
+            if (stored.getParentId() != null) lockParent(stored.getParentId());
+            else {
+                todoMapper.findForUpdate(stored.getId());
+                List<Todo> children = todoMapper.findSubtasksForUpdate(stored.getId());
+                if (!children.isEmpty()) todo.setCompleted(children.stream().allMatch(t -> Boolean.TRUE.equals(t.getCompleted())));
+            }
+        }
         todoMapper.update(todo);
+        if (stored != null && stored.getParentId() != null) refreshParent(stored.getParentId());
         historyMapper.insert(todo.getId(), "UPDATE");
         log.info("編集: id={}", todo.getId());
     }
@@ -218,7 +233,11 @@ public class TodoService {
      */
     @Auditable(action = "DELETE")
     public void delete(Long id) {
+        Todo stored = todoMapper.findById(id);
+        if (stored != null && stored.getParentId() != null) lockParent(stored.getParentId());
+        else if (stored != null) todoMapper.findForUpdate(id);
         todoMapper.deleteById(id);
+        if (stored != null && stored.getParentId() != null) refreshParent(stored.getParentId());
         historyMapper.insert(id, "DELETE");
         log.info("削除: id={}", id);
     }
@@ -248,10 +267,81 @@ public class TodoService {
             return 0;
         }
 
+        var parents = new java.util.TreeSet<Long>();
+        for (Long id : ids.stream().distinct().sorted().toList()) {
+            Todo stored = todoMapper.findById(id);
+            if (stored != null && stored.getParentId() != null) parents.add(stored.getParentId());
+        }
+        parents.forEach(this::lockParent);
         int deleted = todoMapper.deleteByIds(ids);
+        for (Long parentId : parents) {
+            if (todoMapper.findForUpdate(parentId) != null) refreshParent(parentId);
+        }
         for (Long id : ids.stream().distinct().toList()) {
             historyMapper.insert(id, "DELETE");
         }
         return deleted;
+    }
+    @Transactional(readOnly = true)
+    public List<Todo> subtasks(Long parentId) {
+        return todoMapper.findSubtasks(parentId);
+    }
+
+    private Todo lockParent(Long id) {
+        Todo parent = todoMapper.findForUpdate(id);
+        if (parent == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
+        if (parent.getParentId() != null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "サブタスクの下には追加できません");
+        return parent;
+    }
+
+    private void refreshParent(Long parentId) {
+        Todo parent = todoMapper.findForUpdate(parentId);
+        List<Todo> children = todoMapper.findSubtasksForUpdate(parentId);
+        boolean completed = !children.isEmpty() && children.stream().allMatch(t -> Boolean.TRUE.equals(t.getCompleted()));
+        if (parent != null && completed != Boolean.TRUE.equals(parent.getCompleted())) {
+            parent.setCompleted(completed);
+            todoMapper.update(parent);
+            historyMapper.insert(parentId, "UPDATE");
+        }
+    }
+
+    @Auditable(action = "CREATE")
+    public void addSubtask(Long parentId, String title) {
+        Todo parent = lockParent(parentId);
+        if (title == null || title.isBlank() || title.length() > 255) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "名前は1〜255文字で入力してください");
+        }
+        Todo child = new Todo();
+        child.setParentId(parentId);
+        child.setTitle(title.strip());
+        child.setCategory(parent.getCategory());
+        child.setPriority(parent.getPriority());
+        child.setCompleted(false);
+        create(child);
+    }
+
+    @Auditable(action = "UPDATE")
+    public void toggleSubtask(Long parentId, Long id) {
+        lockParent(parentId);
+        Todo child = requireSubtask(parentId, id);
+        child.setCompleted(!Boolean.TRUE.equals(child.getCompleted()));
+        update(child);
+    }
+
+    @Auditable(action = "DELETE")
+    public void deleteSubtask(Long parentId, Long id) {
+        lockParent(parentId);
+        requireSubtask(parentId, id);
+        todoMapper.removeSubtask(parentId, id);
+        historyMapper.insert(id, "DELETE");
+        refreshParent(parentId);
+    }
+
+    private Todo requireSubtask(Long parentId, Long id) {
+        Todo child = todoMapper.findById(id);
+        if (child == null || !parentId.equals(child.getParentId())) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
+        }
+        return child;
     }
 }

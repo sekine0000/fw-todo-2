@@ -24,6 +24,8 @@ public class Todo {
     /** 登録時に採番される識別子。 */
     private Long id;
 
+    private Long parentId;
+
     /** 必須の名称。最大255文字。 */
     @NotBlank(message = "やることを入力してください")
     @Size(max = 255, message = "やることは255文字以内で入力してください")

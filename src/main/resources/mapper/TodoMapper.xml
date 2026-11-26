@@ -5,6 +5,7 @@
 <mapper namespace="com.example.todoapp.TodoMapper">
     <sql id="listConditions">
         AND deleted_at IS NULL
+        AND parent_id IS NULL
         <if test="!showCompleted">
             AND completed = FALSE
         </if>
@@ -41,14 +42,14 @@
         </choose>
     </select>
     <select id="searchPage" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, pinned, completed_at, created_at, updated_at
+        SELECT id, parent_id, title, detail, category, priority, due_date, completed, pinned, completed_at, created_at, updated_at
         FROM todos
         <where><include refid="listConditions" /></where>
         <include refid="listOrder" />
         LIMIT 10 OFFSET #{offset}
     </select>
     <select id="search" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
+        SELECT id, parent_id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos
         <where>
             <include refid="listConditions" />
@@ -66,13 +67,13 @@
         </choose>
     </select>
     <select id="findById" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
+        SELECT id, parent_id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos
         WHERE id = #{id} AND deleted_at IS NULL
     </select>
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO todos (title, detail, category, priority, due_date, completed)
-        VALUES (#{title}, #{detail}, #{category}, #{priority}, #{dueDate}, COALESCE(#{completed}, FALSE))
+        INSERT INTO todos (parent_id, title, detail, category, priority, due_date, completed)
+        VALUES (#{parentId}, #{title}, #{detail}, #{category}, #{priority}, #{dueDate}, COALESCE(#{completed}, FALSE))
     </insert>
     <update id="update">
         UPDATE todos
@@ -112,6 +113,7 @@
     </update>
     <sql id="trashConditions">
         deleted_at IS NOT NULL
+        AND parent_id IS NULL
         <if test="keyword != null and keyword != ''">
             AND title LIKE CONCAT('%', #{keyword}, '%')
         </if>
@@ -131,7 +133,7 @@
         , id ASC
     </sql>
     <select id="searchTrashPage" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
+        SELECT id, parent_id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos WHERE <include refid="trashConditions" />
         <include refid="trashOrder" />
         LIMIT 10 OFFSET #{offset}
@@ -140,4 +142,16 @@
         UPDATE todos SET deleted_at = NULL
         WHERE id = #{id} AND deleted_at IS NOT NULL
     </update>
+    <select id="findForUpdate" resultType="com.example.todoapp.Todo">
+        SELECT * FROM todos WHERE id = #{id} AND deleted_at IS NULL FOR UPDATE
+    </select>
+    <select id="findSubtasks" resultType="com.example.todoapp.Todo">
+        SELECT * FROM todos WHERE parent_id = #{parentId} AND deleted_at IS NULL ORDER BY id
+    </select>
+    <select id="findSubtasksForUpdate" resultType="com.example.todoapp.Todo">
+        SELECT * FROM todos WHERE parent_id = #{parentId} AND deleted_at IS NULL ORDER BY id FOR UPDATE
+    </select>
+    <delete id="removeSubtask">
+        DELETE FROM todos WHERE id = #{id} AND parent_id = #{parentId}
+    </delete>
 </mapper>

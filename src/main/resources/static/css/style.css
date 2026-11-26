@@ -122,9 +122,21 @@ body {
     color: #e2e8f0;
 }
 
-.link {
-    color: #e2e8f0;
+a:not(.btn),
+a:not(.btn):visited {
+    color: #93c5fd;
     text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+a:not(.btn):hover,
+a:not(.btn):focus-visible {
+    color: #dbeafe;
+}
+
+a:focus-visible {
+    outline: 2px solid #93c5fd;
+    outline-offset: 3px;
 }
 
 .calendar-nav {

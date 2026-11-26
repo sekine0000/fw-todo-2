@@ -49,7 +49,7 @@ class TransactionTests {
     void setUp() throws Exception {
         var ds = new DriverManagerDataSource("jdbc:h2:mem:" + System.nanoTime() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
         jdbc = new JdbcTemplate(ds);
-        jdbc.execute("CREATE TABLE todos (id BIGINT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, detail VARCHAR(255), category VARCHAR(255), priority INT, due_date DATE, completed BOOLEAN)");
+        jdbc.execute("CREATE TABLE todos (id BIGINT AUTO_INCREMENT PRIMARY KEY, parent_id BIGINT REFERENCES todos(id) ON DELETE CASCADE, title VARCHAR(255) NOT NULL, detail VARCHAR(255), category VARCHAR(255), priority INT, due_date DATE, completed BOOLEAN)");
         for (String column : java.util.List.of("pinned BOOLEAN DEFAULT FALSE", "deleted_at TIMESTAMP",
                 "completed_at TIMESTAMP", "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
                 "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")) {
@@ -184,4 +184,68 @@ class TransactionTests {
         }).when(todos).count(any(), any(), anyBoolean());
         assertThat(service.count("", "", true)).isZero();
     }
-}
+    @Test
+    void subtaskProgressAndCompletionFollowChanges() throws Exception {
+        Todo parent = todo();
+        service.create(parent);
+        service.addSubtask(parent.getId(), "first");
+        service.addSubtask(parent.getId(), "second");
+        var children = service.subtasks(parent.getId());
+        service.toggleSubtask(parent.getId(), children.get(0).getId());
+        assertThat(service.findById(parent.getId()).getCompleted()).isFalse();
+        var resolver = new org.thymeleaf.templateresolver.ClassLoaderTemplateResolver();
+        resolver.setPrefix("templates/");
+        resolver.setSuffix(".html");
+        var engine = new org.thymeleaf.spring6.SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        var views = new org.thymeleaf.spring6.view.ThymeleafViewResolver();
+        views.setTemplateEngine(engine);
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders
+                .standaloneSetup(new SubtaskController(service)).setViewResolvers(views).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/todos/" + parent.getId()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().attribute("progress", 50L));
+        service.toggleSubtask(parent.getId(), children.get(1).getId());
+        assertThat(service.findById(parent.getId()).getCompleted()).isTrue();
+        assertThat(service.findById(parent.getId()).getCompletedAt()).isNotNull();
+        service.toggleSubtask(parent.getId(), children.get(0).getId());
+        assertThat(service.findById(parent.getId()).getCompleted()).isFalse();
+        assertThat(service.findById(parent.getId()).getCompletedAt()).isNull();
+        service.deleteSubtask(parent.getId(), children.get(0).getId());
+        assertThat(service.findById(parent.getId()).getCompleted()).isTrue();
+        service.addSubtask(parent.getId(), "new");
+        assertThat(service.findById(parent.getId()).getCompleted()).isFalse();
+        assertThat(service.search(null, null, "asc")).extracting(Todo::getId).containsExactly(parent.getId());
+    }
+
+    @Test
+    void subtaskWritesRollBackAndPhysicalParentDeleteCascades() {
+        Todo parent = todo();
+        service.create(parent);
+        service.addSubtask(parent.getId(), "child");
+        Long childId = service.subtasks(parent.getId()).getFirst().getId();
+        doThrow(new IllegalStateException("history unavailable")).when(history).insert(childId, "UPDATE");
+        assertThatThrownBy(() -> service.toggleSubtask(parent.getId(), childId)).isInstanceOf(IllegalStateException.class);
+        assertThat(service.findById(childId).getCompleted()).isFalse();
+        assertThat(service.findById(parent.getId()).getCompleted()).isFalse();
+        jdbc.update("DELETE FROM todos WHERE id = ?", parent.getId());
+        assertThat(count("todos")).isZero();
+    }
+
+    @Test
+    void invalidSubtaskRequestsDoNotChangeData() {
+        Todo parent = todo();
+        service.create(parent);
+        Todo other = todo();
+        service.create(other);
+        service.addSubtask(parent.getId(), "child");
+        Long childId = service.subtasks(parent.getId()).getFirst().getId();
+        assertThatThrownBy(() -> service.toggleSubtask(other.getId(), childId))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThatThrownBy(() -> service.addSubtask(parent.getId(), " "))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThatThrownBy(() -> service.addSubtask(childId, "nested"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        service.deleteSubtask(parent.getId(), childId);
+        assertThat(service.subtasks(parent.getId())).isEmpty();
+        assertThat(service.findById(parent.getId()).getCompleted()).isFalse();
+    }}

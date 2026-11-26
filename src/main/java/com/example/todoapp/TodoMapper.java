@@ -18,6 +18,10 @@ public interface TodoMapper {
             @Param("showCompleted") boolean showCompleted);
 
     Todo findById(Long id);
+    Todo findForUpdate(Long id);
+    List<Todo> findSubtasks(Long parentId);
+    List<Todo> findSubtasksForUpdate(Long parentId);
+    void removeSubtask(@Param("parentId") Long parentId, @Param("id") Long id);
     @org.apache.ibatis.annotations.Select("SELECT * FROM todos WHERE id = #{id}")
     Todo findForAudit(Long id);
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>やること一覧</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=20261126-1">
 </head>
 <body>
     <div class="container">
@@ -83,7 +83,7 @@
                         <input class="todo-select" type="checkbox" name="ids" th:value="${todo.id}"
                                form="bulk-delete-form" th:attr="aria-label=${todo.title + 'を選択'}">
                     </td>
-                    <td th:text="${todo.title}"></td>
+                    <td><a th:unless="${trash}" th:href="@{/todos/{id}(id=${todo.id})}" th:text="${todo.title}"></a><span th:if="${trash}" th:text="${todo.title}"></span></td>
                     <td th:text="${todo.category}"></td>
                     <td>
                         <span th:text="${todo.priority == 1 ? '高' : (todo.priority == 2 ? '中' : (todo.priority == 3 ? '低' : ''))}"></span>

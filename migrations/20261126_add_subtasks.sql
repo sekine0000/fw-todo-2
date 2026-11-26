@@ -1,0 +1,1 @@
+ALTER TABLE todos ADD COLUMN parent_id BIGINT UNSIGNED NULL, ADD INDEX idx_todos_parent_id (parent_id), ADD CONSTRAINT fk_todos_parent FOREIGN KEY (parent_id) REFERENCES todos(id) ON DELETE CASCADE;
