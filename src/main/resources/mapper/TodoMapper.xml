@@ -85,6 +85,13 @@
         INSERT INTO todos (parent_id, title, detail, category, priority, due_date, completed)
         VALUES (#{parentId}, #{title}, #{detail}, #{category}, #{priority}, #{dueDate}, COALESCE(#{completed}, FALSE))
     </insert>
+    <insert id="insertBatch" useGeneratedKeys="true" keyProperty="todos.id">
+        INSERT INTO todos (title, detail, category, priority, due_date, completed)
+        VALUES
+        <foreach collection="todos" item="todo" separator=",">
+            (#{todo.title}, #{todo.detail}, #{todo.category}, #{todo.priority}, #{todo.dueDate}, FALSE)
+        </foreach>
+    </insert>
     <update id="update">
         UPDATE todos
         SET title = #{title},

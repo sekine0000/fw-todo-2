@@ -158,6 +158,13 @@ public class TodoService {
         log.info("登録: id={}", todo.getId());
     }
 
+    /** CSVで検証済みのタスクを一括登録し、同じトランザクションで履歴を残す。 */
+    public void createBatch(List<Todo> todos) {
+        if (todos.isEmpty()) return;
+        todoMapper.insertBatch(todos);
+        todos.forEach(todo -> historyMapper.insert(todo.getId(), "CREATE"));
+    }
+
     /**
      * ごみ箱の該当件数を取得する。
      *

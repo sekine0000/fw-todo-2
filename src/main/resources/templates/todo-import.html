@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV一括インポート</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <h1 class="page-title">CSV一括インポート</h1>
+    <p>UTF-8のCSV（1MB以下）を選択してください。正常な行のみ未完了タスクとして登録します。</p>
+    <p>ヘッダーはtitle（必須・255文字以内）、detail（任意・255文字以内）、category（必須）、priority（必須）、dueDate（任意）です。列順は自由です。</p>
+    <p>ジャンル：デザイン、マーケティング、プログラミング、資格、就職活動。優先度：1（高）、2（中）、3（低）。期限：yyyy-MM-dd（1000〜9999年）。</p>
+    <p>空行は無視します。行番号はヘッダーを含むCSVの物理行番号で、改行を含むデータは開始行を表示します。再取込時は登録済みの行を除いてください。</p>
+    <a class="btn sub" th:href="@{/todos/import/template.csv}">テンプレートCSVをダウンロード</a>
+    <p>テンプレートのサンプル行を置き換えてからアップロードしてください。</p>
+    <form th:action="@{/todos/import}" method="post" enctype="multipart/form-data">
+        <label for="file">CSVファイル</label>
+        <input id="file" name="file" type="file" accept=".csv,text/csv" required>
+        <button class="btn" type="submit">インポート</button>
+    </form>
+    <p class="error" role="alert" th:if="${uploadError}" th:text="${uploadError}"></p>
+    <section th:if="${result}" aria-label="取込結果">
+        <p role="status" th:text="${result.importedCount + '件を登録しました。エラー：' + #lists.size(result.errors) + '件'}"></p>
+        <table class="todo-table" th:unless="${#lists.isEmpty(result.errors)}">
+            <thead><tr><th>行番号</th><th>エラー内容</th></tr></thead>
+            <tbody><tr th:each="error : ${result.errors}"><td th:text="${error.line}"></td><td th:text="${error.message}"></td></tr></tbody>
+        </table>
+    </section>
+    <a class="btn sub" th:href="@{/todos}">一覧へ</a>
+</main>
+</body>
+</html>

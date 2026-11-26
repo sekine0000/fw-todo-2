@@ -33,6 +33,7 @@ public interface TodoMapper {
             @Param("offset") long offset);
 
     void insert(Todo todo);
+    int insertBatch(@Param("todos") List<Todo> todos);
     List<Long> findOrderedIdsForUpdate();
     int updateDisplayOrder(@Param("ids") List<Long> ids);
 
