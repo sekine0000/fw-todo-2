@@ -7,9 +7,19 @@
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
     <title>やること一覧</title>
     <link rel="stylesheet" th:href="@{/css/style.css(v='20261126-2')}">
+    <link rel="stylesheet" th:href="@{/css/progress.css}">
 </head>
 <body>
     <div class="container">
+        <section id="todo-progress" class="todo-progress" th:unless="${trash}"
+                 th:attr="data-url=@{/api/todos/progress}" aria-labelledby="progress-heading">
+            <h2 id="progress-heading">タスクの進捗</h2>
+            <p class="progress-note">全カテゴリの親タスクを集計（削除済み・アーカイブ済みを除く）</p>
+            <div data-overall></div>
+            <h3>カテゴリ別</h3>
+            <div data-categories></div>
+            <p class="progress-note" data-status role="status" aria-live="polite">進捗を読み込み中…</p>
+        </section>
         <form id="quick-add-form" class="quick-add-bar" th:unless="${trash}"
               th:action="@{/api/todo}" method="post" novalidate>
             <label for="quick-title">タスクを追加</label>
@@ -153,6 +163,7 @@
             </th:block>
         </nav>
     </div>
+    <script th:src="@{/js/todo-progress.js}" defer></script>
     <script th:src="@{/js/todo-reorder.js}" defer></script>
     <script th:src="@{/js/todo-quick-add.js}" defer></script>
     <script>

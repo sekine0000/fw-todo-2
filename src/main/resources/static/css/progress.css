@@ -1,0 +1,10 @@
+.todo-progress { margin: 24px 0; padding: 20px; border: 1px solid #ddd; border-radius: 12px; }
+.todo-progress h2 { margin-top: 0; }
+.progress-row { margin: 16px 0; }
+.progress-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; overflow-wrap: anywhere; }
+.progress-track { height: 18px; background: #eee; border-radius: 9px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: #c62828; transition: width 800ms ease, background-color 400ms ease; }
+.progress-fill[data-level="medium"] { background: #f9a825; }
+.progress-fill[data-level="high"] { background: #2e7d32; }
+.progress-note { font-size: .9rem; color: #555; }
+@media (prefers-reduced-motion: reduce) { .progress-fill { transition: none; } }
