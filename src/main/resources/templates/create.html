@@ -50,11 +50,19 @@
             <div class="form-row">
                 <label class="form-label" for="dueDate">期限</label>
                 <input class="form-input" type="date" id="dueDate" th:field="*{dueDate}">
+                <label class="form-label" for="smartDate">自然言語で期限を入力</label>
+                <input class="form-input" type="text" id="smartDate" data-smart-date
+                       th:attr="data-parse-url=@{/api/date/parse}" maxlength="100"
+                       placeholder="例：明日、3日後、来週金曜、12月25日"
+                       aria-describedby="dateHelp datePreview" autocomplete="off">
+                <small id="dateHelp">来週は月曜始まり、年の省略は今年として解析します。</small>
+                <p id="datePreview" data-date-preview role="status" aria-live="polite"></p>
             </div>
 
             <button class="btn" type="submit">確認する</button>
             <a class="btn sub" th:href="@{/todos}">一覧へ</a>
         </form>
     </div>
+    <script th:src="@{/js/smart-date.js}" defer></script>
 </body>
 </html>
