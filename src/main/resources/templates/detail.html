@@ -8,12 +8,17 @@
 </head>
 <body>
 <div class="container">
+    <p class="flash" th:if="${message}" th:text="${message}"></p>
     <h1 class="page-title" th:text="${todo.title}"></h1>
     <p th:text="${todo.detail}"></p>
     <p>ジャンル: <span th:text="${todo.category}"></span></p>
     <p>期限: <span th:text="${todo.dueDate}"></span></p>
     <p>状態: <span th:text="${todo.completed ? '完了' : '未完了'}"></span></p>
     <a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}">編集</a>
+    <form method="post" th:action="@{/todo/{id}/duplicate(id=${todo.id})}">
+        <label><input type="checkbox" name="includeSubtasks" value="true" checked> サブタスクも複製</label>
+        <button class="btn" type="submit">複製</button>
+    </form>
     <h2>サブタスク</h2>
     <p th:text="|進捗率: ${progress}%（${completedCount}/${#lists.size(subtasks)}件完了）|"></p>
     <progress max="100" th:value="${progress}" aria-label="サブタスクの進捗率"></progress>

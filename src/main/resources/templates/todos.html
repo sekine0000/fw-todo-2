@@ -109,6 +109,10 @@
                             <button class="btn" type="submit" th:attr="aria-pressed=${todo.pinned}"
                                     th:text="${todo.pinned ? '印を外す' : '印を付ける'}">印を付ける</button>
                         </form>
+                        <form th:unless="${trash}" method="post" th:action="@{/todo/{id}/duplicate(id=${todo.id})}">
+                            <label><input type="checkbox" name="includeSubtasks" value="true" checked> サブタスクも複製</label>
+                            <button class="btn" type="submit">複製</button>
+                        </form>
                         <a class="link" th:unless="${trash}" th:href="@{/todos/{id}/edit(id=${todo.id})}">編集</a>
                         <a class="link" th:unless="${trash}" th:href="@{/todos/{id}/delete(id=${todo.id})}">削除</a>
                         <form th:if="${trash}" method="post" th:action="@{/todos/{id}/restore(id=${todo.id}, trash=1)}">

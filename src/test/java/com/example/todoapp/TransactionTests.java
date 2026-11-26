@@ -258,6 +258,84 @@ class TransactionTests {
         assertThat(service.findById(parent.getId()).getCompleted()).isFalse();
     }
 
+    @Test
+    void duplicateCopiesFieldsAndOptionalChildrenWithoutChangingOriginals() {
+        Todo source = todo();
+        source.setTitle("a".repeat(255));
+        source.setDetail("memo");
+        source.setDueDate(java.time.LocalDate.of(2026, 12, 1));
+        service.create(source);
+        service.addSubtask(source.getId(), "child");
+        Long childId = service.subtasks(source.getId()).getFirst().getId();
+        service.toggleSubtask(source.getId(), childId);
+        Todo copy = service.duplicate(source.getId(), true);
+        Todo stored = service.findById(copy.getId());
+        assertThat(stored.getTitle()).isEqualTo("a".repeat(250) + "（コピー）");
+        assertThat(stored.getDetail()).isEqualTo(source.getDetail());
+        assertThat(stored.getCategory()).isEqualTo(source.getCategory());
+        assertThat(stored.getPriority()).isEqualTo(source.getPriority());
+        assertThat(stored.getDueDate()).isEqualTo(source.getDueDate());
+        assertThat(stored.getCompleted()).isFalse();
+        assertThat(stored.getCompletedAt()).isNull();
+        var children = service.subtasks(copy.getId());
+        assertThat(children).hasSize(1);
+        assertThat(children.getFirst().getId()).isNotEqualTo(childId);
+        assertThat(children.getFirst().getTitle()).isEqualTo("child（コピー）");
+        assertThat(children.getFirst().getCompleted()).isFalse();
+        assertThat(children.getFirst().getCompletedAt()).isNull();
+        assertThat(service.findById(source.getId()).getCompleted()).isTrue();
+        assertThat(service.findById(childId).getCompleted()).isTrue();
+        assertThat(service.subtasks(service.duplicate(source.getId(), false).getId())).isEmpty();
+    }
+
+    @Test
+    void duplicateChildFailureRollsBackParentChildrenAndHistory() {
+        Todo source = todo();
+        service.create(source);
+        service.addSubtask(source.getId(), "child");
+        int originalHistory = count("todo_history");
+        doAnswer(invocation -> {
+            Todo inserted = invocation.getArgument(0);
+            invocation.callRealMethod();
+            if (inserted.getParentId() != null) throw new IllegalStateException("child failure");
+            return null;
+        }).when(todos).insert(any(Todo.class));
+        assertThatThrownBy(() -> service.duplicate(source.getId(), true)).isInstanceOf(IllegalStateException.class);
+        assertThat(count("todos")).isEqualTo(2);
+        assertThat(count("todo_history")).isEqualTo(originalHistory);
+    }
+
+    @Test
+    void duplicateEndpointAndFormsWorkAndMissingOrDeletedTasksReturn404() throws Exception {
+        Todo source = todo();
+        service.create(source);
+        var resolver = new org.thymeleaf.templateresolver.ClassLoaderTemplateResolver();
+        resolver.setCharacterEncoding("UTF-8");
+        resolver.setPrefix("templates/");
+        resolver.setSuffix(".html");
+        var engine = new org.thymeleaf.spring6.SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        var views = new org.thymeleaf.spring6.view.ThymeleafViewResolver();
+        views.setTemplateEngine(engine);
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(
+                new HomeController(service), new SubtaskController(service)).setViewResolvers(views).build();
+        for (String path : java.util.List.of("/todos", "/todos/" + source.getId())) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(
+                            org.hamcrest.Matchers.containsString("/todo/" + source.getId() + "/duplicate")));
+        }
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                        "/todo/" + source.getId() + "/duplicate").param("includeSubtasks", "true"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/todos"));
+        service.delete(source.getId());
+        for (Long id : java.util.List.of(source.getId(), 999L)) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/todo/" + id + "/duplicate"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+        }
+    }
+
     private TodoTemplate savedTemplate() {
         var template = new TodoTemplate();
         template.setName("週の準備");

@@ -36,6 +36,16 @@ public class HomeController {
         this.todoService = todoService;
     }
 
+    /** タスクを複製して、一覧画面へ移動する。 */
+    @PostMapping("/todo/{id}/duplicate")
+    public String duplicate(@PathVariable Long id,
+            @RequestParam(defaultValue = "false") boolean includeSubtasks,
+            RedirectAttributes redirectAttributes) {
+        todoService.duplicate(id, includeSubtasks);
+        redirectAttributes.addFlashAttribute("message", "複製しました");
+        return "redirect:/todos";
+    }
+
     /**
      * ホーム画面を表示する。
      *

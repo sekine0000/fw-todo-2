@@ -307,6 +307,40 @@ public class TodoService {
         todoMapper.updateDisplayOrder(ordered);
     }
 
+    /** 親と選択されたサブタスクを、未完了の独立したタスクとして一括複製する。 */
+    @Transactional(rollbackFor = Exception.class)
+    public Todo duplicate(Long id, boolean includeSubtasks) {
+        Todo source = todoMapper.findForUpdate(id);
+        if (source == null) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
+        }
+        Todo copy = copyTask(source);
+        create(copy);
+        if (includeSubtasks) {
+            for (Todo child : todoMapper.findSubtasksForUpdate(id)) {
+                Todo childCopy = copyTask(child);
+                childCopy.setParentId(copy.getId());
+                create(childCopy);
+            }
+        }
+        return copy;
+    }
+
+    private Todo copyTask(Todo source) {
+        Todo copy = new Todo();
+        String suffix = "（コピー）";
+        String title = source.getTitle();
+        // DBの255文字制限内に接尾辞を収める（サロゲートペアも分割しない）。
+        int length = Math.min(title.codePointCount(0, title.length()), 255 - suffix.length());
+        copy.setTitle(title.substring(0, title.offsetByCodePoints(0, length)) + suffix);
+        copy.setDetail(source.getDetail());
+        copy.setCategory(source.getCategory());
+        copy.setPriority(source.getPriority());
+        copy.setDueDate(source.getDueDate());
+        copy.setCompleted(false);
+        return copy;
+    }
+
     private Todo lockParent(Long id) {
         Todo parent = todoMapper.findForUpdate(id);
         if (parent == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
