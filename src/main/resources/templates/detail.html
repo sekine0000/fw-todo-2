@@ -41,6 +41,25 @@
         <button class="btn" type="submit">追加</button>
     </form>
     <a class="link" th:href="@{/todos}">一覧に戻る</a>
+    <section id="task-dependencies" th:data-task-id="${todo.id}"
+             th:data-api-url="@{/api/todos/{id}/dependencies(id=${todo.id})}">
+        <h2>タスクの依存関係</h2>
+        <p id="dependency-status" role="status" aria-live="polite"></p>
+        <form id="dependency-form">
+            <label for="prerequisite-select">前提タスク</label>
+            <select id="prerequisite-select" class="form-input" required disabled></select>
+            <button id="dependency-add" class="btn" type="submit" disabled>追加</button>
+        </form>
+        <ul id="prerequisite-list"></ul>
+        <p id="dependency-message" role="alert"></p>
+        <button id="dependency-reload" class="btn" type="button">再読み込み</button>
+        <p>矢印は前提タスクから後続タスクを指します。現在のタスクにつながる依存関係を表示します。</p>
+        <div style="overflow-x:auto">
+            <svg id="dependency-graph" role="img" aria-label="タスクの依存関係グラフ"></svg>
+        </div>
+        <noscript>依存関係の操作とグラフ表示にはJavaScriptが必要です。</noscript>
+    </section>
 </div>
+<script defer th:src="@{/js/task-dependencies.js}"></script>
 </body>
 </html>
