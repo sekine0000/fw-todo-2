@@ -23,6 +23,22 @@ public class DashboardService {
         return new Data(mapper.summary(today), daily, mapper.categoryCounts());
     }
 
+    @Transactional(readOnly = true)
+    public List<DashboardMapper.CategoryCount> categoryCounts() {
+        return mapper.categoryCounts();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PriorityCount> priorityCounts() {
+        Map<Integer, Long> counts = new LinkedHashMap<>();
+        for (var row : mapper.priorityCounts()) counts.put(row.getPriority(), row.getTaskCount());
+        return List.of(new PriorityCount("HIGH", counts.getOrDefault(1, 0L)),
+                new PriorityCount("MEDIUM", counts.getOrDefault(2, 0L)),
+                new PriorityCount("LOW", counts.getOrDefault(3, 0L)));
+    }
+
+    public record PriorityCount(String priority, long taskCount) { }
+
     public record Data(DashboardMapper.Summary summary, Map<String, Long> daily,
             List<DashboardMapper.CategoryCount> categories) { }
 

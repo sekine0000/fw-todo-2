@@ -27,6 +27,16 @@ public interface DashboardMapper {
             + "GROUP BY COALESCE(NULLIF(TRIM(category), ''), '未分類') ORDER BY task_count DESC, category ASC")
     List<CategoryCount> categoryCounts();
 
+    @Select("SELECT priority, COUNT(*) AS task_count FROM todos WHERE " + SCOPE
+            + "GROUP BY priority ORDER BY priority")
+    List<PriorityCount> priorityCounts();
+
+    @Data
+    class PriorityCount {
+        private Integer priority;
+        private long taskCount;
+    }
+
     @Data
     class Summary {
         private long total;

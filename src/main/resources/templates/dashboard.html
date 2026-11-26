@@ -46,10 +46,15 @@
             <div class="chart-frame"><canvas id="status-chart" role="img" aria-label="完了と未完了の割合。集計データを参照してください。"></canvas></div>
             <details><summary>集計データ</summary><p th:text="${'完了：' + summary.completed + '件 / 未完了：' + summary.incomplete + '件'}"></p></details>
         </section>
-        <section class="dashboard-card dashboard-wide">
+        <section class="dashboard-card">
             <h2>カテゴリ別のタスク数</h2>
-            <div class="category-chart-scroll"><div class="chart-frame" id="category-frame"><canvas id="category-chart" role="img" aria-label="カテゴリ別のタスク数。集計データを参照してください。"></canvas></div></div>
+            <div class="chart-frame" id="category-frame"><canvas id="category-chart" role="img" aria-label="カテゴリ別のタスク数。集計データを参照してください。"></canvas></div>
             <details><summary>集計データ</summary><p th:if="${categories.isEmpty()}">集計対象のタスクがありません。</p><table class="todo-table" th:unless="${categories.isEmpty()}"><thead><tr><th>カテゴリ</th><th>タスク数</th></tr></thead><tbody><tr th:each="category : ${categories}"><td th:text="${category.category}"></td><td th:text="${category.taskCount}"></td></tr></tbody></table></details>
+        </section>
+        <section class="dashboard-card">
+            <h2>優先度別のタスク数</h2>
+            <div class="chart-frame"><canvas id="priority-chart" role="img" aria-label="優先度別のタスク数"></canvas></div>
+            <p id="priority-summary" role="status">読み込み中…</p>
         </section>
     </div>
 </main>
@@ -89,13 +94,14 @@
                 }}}
             }}
         });
-        document.getElementById('category-frame').style.height = `${Math.max(280, categories.length * 42)}px`;
-        new Chart(document.getElementById('category-chart'), {
-            type: 'bar',
-            data: {labels: categories.map(row => row.category), datasets: [{label: 'タスク数', data: categories.map(row => row.taskCount), backgroundColor: '#a78bfa', borderRadius: 4}]},
-            options: {...options, indexAxis: 'y', scales: {x: countAxis}}
-        });
     })();
 </script>
+<script th:inline="javascript">
+    window.distributionUrls = {
+        categories: /*[[@{/api/dashboard/categories}]]*/ '/api/dashboard/categories',
+        priorities: /*[[@{/api/dashboard/priorities}]]*/ '/api/dashboard/priorities'
+    };
+</script>
+<script th:src="@{/js/task-distributions.js}"></script>
 </body>
 </html>

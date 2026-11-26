@@ -27,7 +27,7 @@ class DashboardTests {
                 + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
         jdbc = new JdbcTemplate(ds);
         jdbc.execute("CREATE TABLE todos (id BIGINT PRIMARY KEY, parent_id BIGINT, category VARCHAR(255), "
-                + "completed BOOLEAN DEFAULT FALSE, due_date DATE, completed_at TIMESTAMP, "
+                + "priority INT DEFAULT 2, completed BOOLEAN DEFAULT FALSE, due_date DATE, completed_at TIMESTAMP, "
                 + "deleted_at TIMESTAMP, archived BOOLEAN DEFAULT FALSE)");
         var factory = new SqlSessionFactoryBean();
         factory.setDataSource(ds);
@@ -62,6 +62,32 @@ class DashboardTests {
         assertThat(data.categories()).extracting(DashboardMapper.CategoryCount::getTaskCount)
                 .containsExactly(4L, 2L, 1L);
         assertThat(data.categories().getLast().getCategory()).isEqualTo("未分類");
+    }
+
+    @Test
+    void distributionApisAggregateAndExcludeHiddenTasks() throws Exception {
+        jdbc.execute("INSERT INTO todos (id, category, priority, archived, parent_id, deleted_at) VALUES "
+                + "(1, 'Work', 1, FALSE, NULL, NULL), (2, 'Work', 2, FALSE, NULL, NULL),"
+                + "(3, NULL, 1, FALSE, NULL, NULL), (4, '', 3, TRUE, NULL, NULL),"
+                + "(5, 'Work', 3, FALSE, 1, NULL), (6, 'Work', 3, FALSE, NULL, CURRENT_TIMESTAMP)");
+        var mvc = MockMvcBuilders.standaloneSetup(new DashboardController(service)).build();
+        mvc.perform(get("/api/dashboard/categories")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].category").value("Work"))
+                .andExpect(jsonPath("$[0].taskCount").value(2))
+                .andExpect(jsonPath("$[1].taskCount").value(1));
+        mvc.perform(get("/api/dashboard/priorities")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].priority").value("HIGH"))
+                .andExpect(jsonPath("$[0].taskCount").value(2))
+                .andExpect(jsonPath("$[1].priority").value("MEDIUM"))
+                .andExpect(jsonPath("$[1].taskCount").value(1))
+                .andExpect(jsonPath("$[2].priority").value("LOW"))
+                .andExpect(jsonPath("$[2].taskCount").value(0));
+        jdbc.execute("DELETE FROM todos");
+        mvc.perform(get("/api/dashboard/categories")).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(get("/api/dashboard/priorities"))
+                .andExpect(jsonPath("$[0].taskCount").value(0))
+                .andExpect(jsonPath("$[1].taskCount").value(0))
+                .andExpect(jsonPath("$[2].taskCount").value(0));
     }
 
     @Test
@@ -114,7 +140,8 @@ class DashboardTests {
         String html = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
         assertThat(html).contains("id=\"completion-heatmap\"", "completion-heatmap.js", "年間完了数: 0件", "Less", "More");
         assertThat(html).contains("ダッシュボード", "タスクがありません", "const completed = 0;",
-                "const categories = [];", "chart.js@4.4.8", "id=\"category-chart\"");
+                "const categories = [];", "chart.js@4.4.8", "id=\"category-chart\"",
+                "id=\"priority-chart\"", "task-distributions.js", "\\/api\\/dashboard\\/categories", "\\/api\\/dashboard\\/priorities");
         jdbc.update("INSERT INTO todos (id, category) VALUES (1, ?)", "</script><script>alert(1)</script>");
         String populated = mvc.perform(get("/dashboard")).andExpect(status().isOk()).andReturn()
                 .getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);

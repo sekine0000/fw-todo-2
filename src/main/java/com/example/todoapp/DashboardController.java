@@ -11,6 +11,18 @@ public class DashboardController {
 
     public DashboardController(DashboardService service) { this.service = service; }
 
+    @GetMapping("/api/dashboard/categories")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public java.util.List<DashboardMapper.CategoryCount> categories() {
+        return service.categoryCounts();
+    }
+
+    @GetMapping("/api/dashboard/priorities")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public java.util.List<DashboardService.PriorityCount> priorities() {
+        return service.priorityCounts();
+    }
+
     @GetMapping("/dashboard")
     public String dashboard(Model model) {
         LocalDate today = LocalDate.now();
