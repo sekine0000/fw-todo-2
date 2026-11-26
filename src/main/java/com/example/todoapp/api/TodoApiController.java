@@ -27,15 +27,39 @@ import com.example.todoapp.TodoService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
+/**
+ * ToDoのCRUDとCSV出力のREST APIを提供する。入力には {@link TodoRequest} を使用する。
+ *
+ * @author ToDoアプリ開発チーム
+ * @version 0.0.1
+ * @since 0.0.1
+ * @see com.example.todoapp.TodoService
+ */
 @RestController
 public class TodoApiController {
 
     private final TodoService todoService;
 
+    /**
+     * 依存するサービスまたはマッパーを受け取って構築する。
+     *
+     * @param todoService ToDo業務サービス
+     */
     public TodoApiController(TodoService todoService) {
         this.todoService = todoService;
     }
 
+    /**
+     * 検索条件に一致するToDo一覧を取得する。 期限の範囲で絞り込み、完了済みも含む。
+     *
+     * @param keyword タイトルの部分一致条件。空文字列または {@code null} で指定なし
+     * @param category ジャンルの一致条件。空文字列または {@code null} で指定なし
+     * @param order 期限の並び順。{@code desc} で降順、それ以外は昇順
+     * @param from 期限の下限（当日を含む）。{@code null} で指定なし
+     * @param to 期限の上限（当日を含む）。{@code null} で指定なし
+     * @return 検索結果。該当しない場合は空リスト
+     * @throws org.springframework.dao.DataAccessException ToDoのデータベース処理に失敗した場合
+     */
     @GetMapping("/api/todos")
     public List<TodoDto> todos(
             @RequestParam(name = "keyword", defaultValue = "") String keyword,
@@ -50,6 +74,16 @@ public class TodoApiController {
                 .toList();
     }
 
+    /**
+     * 検索結果をUTF-8のBOM付きCSVで返す。数式として解釈され得る値を保護する。
+     *
+     * @param keyword タイトルの部分一致条件。空文字列または {@code null} で指定なし
+     * @param category ジャンルの一致条件。空文字列または {@code null} で指定なし
+     * @param order 期限の並び順。{@code desc} で降順、それ以外は昇順
+     * @param showCompleted 完了済みも含める場合は {@code true}
+     * @param trash ごみ箱の指定。画面・APIでは {@code 1}、サービスでは {@code true}
+     * @return 処理結果とHTTPステータスを含むレスポンス
+     */
     @GetMapping(value = "/api/todos.csv", produces = "text/csv;charset=UTF-8")
     public ResponseEntity<byte[]> csv(
             @RequestParam(name = "keyword", defaultValue = "") String keyword,
@@ -77,6 +111,12 @@ public class TodoApiController {
                 .body(csv.toString().getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * 数式対策と引用符のエスケープを行いCSV行を追記する。
+     *
+     * @param csv 出力先バッファー
+     * @param values CSVに出力する値。{@code null} は空文字列に変換する
+     */
     private static void appendCsvRow(StringBuilder csv, String... values) {
         for (int i = 0; i < values.length; i++) {
             if (i > 0) csv.append(',');
@@ -92,6 +132,13 @@ public class TodoApiController {
         csv.append("\r\n");
     }
 
+    /**
+     * 未削除のToDoをIDで取得する。 対象が存在しない場合はHTTP 404を返す。
+     *
+     * @param id 対象ToDoのID
+     * @return 処理結果とHTTPステータスを含むレスポンス
+     * @throws org.springframework.dao.DataAccessException ToDoのデータベース処理に失敗した場合
+     */
     @GetMapping("/api/todos/{id}")
     public ResponseEntity<?> findById(@PathVariable("id") Long id) {
         Todo todo = todoService.findById(id);
@@ -101,6 +148,13 @@ public class TodoApiController {
         return ResponseEntity.ok(TodoDto.from(todo));
     }
 
+    /**
+     * ToDoを新規作成する。 作成先URIとHTTP 201を返す。検証エラーは {@link #badRequest} で処理する。
+     *
+     * @param request リクエストデータ
+     * @return 処理結果とHTTPステータスを含むレスポンス
+     * @throws org.springframework.dao.DataAccessException ToDoのデータベース処理に失敗した場合
+     */
     @PostMapping("/api/todos")
     public ResponseEntity<TodoDto> create(@Valid @RequestBody TodoRequest request) {
         Todo todo = request.toTodo();
@@ -110,6 +164,14 @@ public class TodoApiController {
                 .body(TodoDto.from(created));
     }
 
+    /**
+     * ToDoを更新する。 対象が存在しない場合はHTTP 404を返す。
+     *
+     * @param id 対象ToDoのID
+     * @param request リクエストデータ
+     * @return 処理結果とHTTPステータスを含むレスポンス
+     * @throws org.springframework.dao.DataAccessException ToDoのデータベース処理に失敗した場合
+     */
     @PutMapping("/api/todos/{id}")
     public ResponseEntity<?> update(@PathVariable("id") Long id, @Valid @RequestBody TodoRequest request) {
         Todo existing = todoService.findById(id);
@@ -122,6 +184,13 @@ public class TodoApiController {
         return ResponseEntity.ok(TodoDto.from(todoService.findById(id)));
     }
 
+    /**
+     * ToDoを論理削除する。 対象が存在しない場合はHTTP 404を返す。
+     *
+     * @param id 対象ToDoのID
+     * @return 処理結果とHTTPステータスを含むレスポンス
+     * @throws org.springframework.dao.DataAccessException ToDoのデータベース処理に失敗した場合
+     */
     @DeleteMapping("/api/todos/{id}")
     public ResponseEntity<?> delete(@PathVariable("id") Long id) {
         Todo existing = todoService.findById(id);
@@ -132,6 +201,13 @@ public class TodoApiController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * 入力検証エラーを項目別の詳細を含むHTTP 400に変換する。
+     *
+     * @param exception 入力検証で発生した例外
+     * @param request リクエストデータ
+     * @return 処理結果とHTTPステータスを含むレスポンス
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> badRequest(
             MethodArgumentNotValidException exception, HttpServletRequest request) {
@@ -146,6 +222,12 @@ public class TodoApiController {
         return ResponseEntity.badRequest().body(problem);
     }
 
+    /**
+     * 対象が存在しないことを示すHTTP 404を構築する。
+     *
+     * @param id 対象ToDoのID
+     * @return 処理結果とHTTPステータスを含むレスポンス
+     */
     private ResponseEntity<ProblemDetail> notFound(Long id) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.NOT_FOUND, "Todo with id " + id + " was not found.");
