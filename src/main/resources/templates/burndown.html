@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バーンダウン | ToDo</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/burndown.css}">
+</head>
+<body><main class="container dashboard">
+    <nav><a class="link" th:href="@{/todos}">タスク一覧</a> <a class="link" th:href="@{/dashboard}">ダッシュボード</a></nav>
+    <h1>バーンダウンチャート</h1>
+    <p><a class="link" th:href="@{/sprints/new}">スプリントを作成</a></p>
+    <p th:if="${sprints.isEmpty()}">スプリントがありません。期間と対象タスクを登録してください。</p>
+    <form th:unless="${sprints.isEmpty()}" method="get" th:action="@{/burndown}">
+        <label for="sprint-select">スプリント</label>
+        <select id="sprint-select" name="sprintId">
+            <option th:each="s : ${sprints}" th:value="${s.id}" th:selected="${selected != null and s.id == selected.id}" th:text="${s.name + ' (' + s.startDate + ' ～ ' + s.endDate + ')'}"></option>
+        </select>
+        <button type="submit">表示</button>
+    </form>
+    <section th:if="${selected != null}" class="dashboard-card">
+        <h2 th:text="${selected.name}"></h2>
+        <p th:text="${selected.startDate + ' ～ ' + selected.endDate}"></p>
+        <p>進捗 <span class="sprint-badge" th:classappend="${data.tone}" th:text="${data.status}"></span></p>
+        <p th:text="${'総タスク数: ' + data.total + '件 / 残タスク数: ' + data.remaining + '件'}"></p>
+        <p th:if="${data.total == 0}">対象タスクは0件です。</p>
+        <p>開始日前日は開始時点の基準値、各日は日末の残数です。未来日の実績は表示しません。判定は日本時間の今日（終了後は終了日）の理想残数との比較です。</p>
+        <p>総数は作成時の対象タスクで固定し、完了数は現在の完了日時で再集計します。再オープンや完全削除により過去の実績も変わります。</p>
+        <p id="chart-error" role="status" hidden>グラフを読み込めませんでした。日別データをご確認ください。</p>
+        <div class="chart-frame"><canvas id="burndown-chart" role="img" aria-label="理想線と実績線による残タスク数の推移。日別データも参照できます。"></canvas></div>
+        <noscript><p>グラフにはJavaScriptが必要です。日別データをご確認ください。</p></noscript>
+        <details><summary>日別データ</summary>
+            <table class="todo-table"><thead><tr><th>日付</th><th>理想残数</th><th>実績残数</th></tr></thead><tbody>
+            <tr th:each="label, row : ${data.labels}"><td th:text="${label}"></td><td th:text="${#numbers.formatDecimal(data.ideal[row.index], 1, 2)}"></td><td th:text="${data.actual[row.index] == null ? '—' : data.actual[row.index]}"></td></tr>
+            </tbody></table>
+        </details>
+    </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script th:if="${selected != null}" th:inline="javascript">
+(() => {
+    const labels = /*[[${data.labels}]]*/ [];
+    const ideal = /*[[${data.ideal}]]*/ [];
+    const actual = /*[[${data.actual}]]*/ [];
+    if (typeof Chart === 'undefined') {
+        document.getElementById('chart-error').hidden = false;
+        return;
+    }
+    new Chart(document.getElementById('burndown-chart'), {
+        type: 'line',
+        data: {labels, datasets: [
+            {label: '理想線', data: ideal, borderColor: '#94a3b8', borderDash: [6, 4], tension: 0, fill: false},
+            {label: '実績線', data: actual, borderColor: '#38bdf8', borderDash: [], tension: 0, fill: false, spanGaps: false}
+        ]},
+        options: {responsive: true, maintainAspectRatio: false,
+            scales: {y: {beginAtZero: true, ticks: {precision: 0}, title: {display: true, text: '残タスク数'}},
+                x: {ticks: {maxTicksLimit: 12}}},
+            plugins: {legend: {labels: {color: '#cbd5e1'}}}}
+    });
+})();
+</script></body></html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スプリント作成 | ToDo</title><link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/burndown.css}"></head>
+<body><main class="container">
+    <a class="link" th:href="@{/burndown}">バーンダウンへ戻る</a>
+    <h1>スプリント作成</h1>
+    <form th:action="@{/sprints}" method="post" th:object="${sprint}">
+        <div th:if="${#fields.hasAnyErrors()}" role="alert"><p>入力内容を確認してください。</p><ul><li th:each="error : ${#fields.allErrors()}" th:text="${error}"></li></ul></div>
+        <p><label for="name">名前</label><input id="name" th:field="*{name}" required maxlength="100"></p>
+        <p><label for="startDate">開始日</label><input type="date" id="startDate" th:field="*{startDate}" required></p>
+        <p><label for="endDate">終了日</label><input type="date" id="endDate" th:field="*{endDate}" required></p>
+        <p>開始日・終了日を含めて最大366日。1日だけのスプリントも作成できます。</p>
+        <fieldset><legend>対象タスク</legend>
+            <p>作成後の対象タスクは固定です。サブタスク・削除済み・アーカイブ済みは選択できません。</p>
+            <p th:if="${tasks.isEmpty()}">選択できるタスクがありません。対象0件でも作成できます。</p>
+            <label class="sprint-task" th:each="task : ${tasks}"><input type="checkbox" th:field="*{taskIds}" th:value="${task.id}"><span th:text="${task.title}"></span></label>
+        </fieldset>
+        <button type="submit">作成</button>
+    </form>
+</main></body></html>

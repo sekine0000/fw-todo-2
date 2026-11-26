@@ -1,0 +1,7 @@
+.sprint-badge { display: inline-block; padding: .25rem .8rem; border-radius: 1rem; font-weight: bold; }
+.sprint-badge.normal { background: #164e63; color: #cffafe; }
+.sprint-badge.late { background: #7f1d1d; color: #fee2e2; }
+.sprint-badge.ahead { background: #14532d; color: #dcfce7; }
+.sprint-task { display: flex; align-items: center; gap: .6rem; margin: .6rem 0; }
+.sprint-task input { width: auto; }
+#sprint-select { max-width: 100%; margin: .5rem; }

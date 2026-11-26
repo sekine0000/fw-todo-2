@@ -12,6 +12,7 @@
 <main class="container dashboard">
     <nav aria-label="画面の移動"><a class="link" th:href="@{/todos}">タスク一覧</a> <a class="link" th:href="@{/calendar}">カレンダー</a></nav>
     <h1 class="page-title">ダッシュボード</h1>
+    <p><a class="link" th:href="@{/burndown}">スプリントのバーンダウンを見る</a></p>
     <p th:text="${today + ' 時点のタスク状況'}"></p>
     <p>削除済み・アーカイブ済み・サブタスクを除いて集計しています。期限切れは、期限が今日より前の未完了タスクです。</p>
     <section class="dashboard-stats" aria-label="タスク統計">
