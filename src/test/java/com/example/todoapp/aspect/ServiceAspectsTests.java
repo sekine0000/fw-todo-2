@@ -41,7 +41,7 @@ class ServiceAspectsTests {
         mapper = mock(TodoMapper.class);
         context = new AnnotationConfigApplicationContext();
         context.register(AopConfiguration.class, LoggingAspect.class, PerformanceAspect.class);
-        context.registerBean(TodoService.class, () -> new TodoService(mapper));
+        context.registerBean(TodoService.class, () -> new TodoService(mapper, org.mockito.Mockito.mock(com.example.todoapp.TodoHistoryMapper.class), org.mockito.Mockito.mock(com.example.todoapp.AuditLogService.class)));
         context.refresh();
         service = context.getBean(TodoService.class);
     }
