@@ -282,6 +282,35 @@ public class TodoService {
         }
         return deleted;
     }
+    /** 選択したタスクの状態を一括更新する。サブタスクを持つ親は既存の集計ルールに従う。 */
+    @Auditable(action = "UPDATE")
+    public int updateStatusByIds(List<Long> ids, boolean completed) {
+        if (ids == null || ids.isEmpty()) return 0;
+        var changed = new java.util.ArrayList<Long>();
+        var parents = new java.util.TreeSet<Long>();
+        for (Long id : ids.stream().filter(java.util.Objects::nonNull).distinct().sorted().toList()) {
+            Todo stored = todoMapper.findById(id);
+            if (stored == null) continue;
+            Long parentId = stored.getParentId() == null ? id : stored.getParentId();
+            lockParent(parentId);
+            stored = todoMapper.findForUpdate(id);
+            if (stored == null || Boolean.TRUE.equals(stored.getCompleted()) == completed) continue;
+            if (stored.getParentId() == null) {
+                var children = todoMapper.findSubtasksForUpdate(id);
+                if (!children.isEmpty()
+                        && children.stream().allMatch(t -> Boolean.TRUE.equals(t.getCompleted())) != completed) continue;
+            } else {
+                parents.add(parentId);
+            }
+            changed.add(id);
+        }
+        if (changed.isEmpty()) return 0;
+        int updated = todoMapper.updateStatusByIds(changed, completed);
+        changed.forEach(id -> historyMapper.insert(id, "UPDATE"));
+        parents.forEach(this::refreshParent);
+        return updated;
+    }
+
     @Transactional(readOnly = true)
     public List<Todo> subtasks(Long parentId) {
         return todoMapper.findSubtasks(parentId);

@@ -292,6 +292,27 @@ public class HomeController {
      * @return 表示するテンプレート名またはリダイレクト先
      * @throws org.springframework.dao.DataAccessException ToDoのデータベース処理に失敗した場合
      */
+    @PostMapping("/todos/bulk-status")
+    public String bulkStatus(@RequestParam(name = "ids", required = false) List<Long> ids,
+            @RequestParam boolean completed,
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "") String category,
+            @RequestParam(defaultValue = "manual") String order,
+            @RequestParam(defaultValue = "false") boolean showCompleted,
+            @RequestParam(defaultValue = "1") int page,
+            RedirectAttributes redirectAttributes) {
+        int updated = todoService.updateStatusByIds(ids, completed);
+        redirectAttributes.addFlashAttribute("message", updated > 0
+                ? updated + (completed ? "件を完了にしました" : "件を未完了に戻しました")
+                : "変更対象がありません（未選択・変更済み・削除済み、またはサブタスクの状態に従うタスクです）");
+        redirectAttributes.addAttribute("keyword", keyword);
+        redirectAttributes.addAttribute("category", category);
+        redirectAttributes.addAttribute("order", "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc"));
+        redirectAttributes.addAttribute("showCompleted", showCompleted);
+        redirectAttributes.addAttribute("page", page);
+        return "redirect:/todos";
+    }
+
     @PostMapping("/todos/bulk-delete")
     public String bulkDelete(@RequestParam(name = "ids", required = false) List<Long> ids,
             @RequestParam(defaultValue = "") String keyword,

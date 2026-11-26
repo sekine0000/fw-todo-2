@@ -44,6 +44,8 @@ public interface TodoMapper {
 
     int deleteByIds(@Param("ids") List<Long> ids);
 
+    int updateStatusByIds(@Param("ids") List<Long> ids, @Param("completed") boolean completed);
+
     long countTrash(@Param("keyword") String keyword, @Param("category") String category);
 
     List<Todo> searchTrashPage(@Param("keyword") String keyword, @Param("category") String category,

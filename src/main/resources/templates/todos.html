@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <a th:href="@{/admin/audit-logs}">管理者向け監査ログ</a>
-        <p class="flash" th:if="${message}" th:text="${message}"></p>
+        <p class="flash" role="status" th:if="${message}" th:text="${message}"></p>
 
         <h1 class="page-title" th:text="${trash ? '削除済みのやること' : 'やること一覧'}">やること一覧</h1>
 
@@ -62,6 +62,12 @@
             <input type="hidden" name="showCompleted" th:value="${showCompleted}">
             <input type="hidden" name="page" th:value="${currentPage}">
             <p>全選択は表示中のページが対象です。</p>
+            <p id="selection-count" role="status" aria-live="polite">0件選択中</p>
+            <button class="btn bulk-status-button" type="submit" th:formaction="@{/todos/bulk-status}"
+                    name="completed" value="true" disabled>完了にする</button>
+            <button class="btn sub bulk-status-button" type="submit" th:formaction="@{/todos/bulk-status}"
+                    name="completed" value="false" disabled>未完了に戻す</button>
+            <p>サブタスクを持つタスクの状態は、サブタスクの完了状況に従います。</p>
             <button id="bulk-delete-button" class="btn" type="submit" disabled>選択した項目を削除</button>
         </form>
 
@@ -143,6 +149,10 @@
                 selectAll.checked = count === checkboxes.length;
                 selectAll.indeterminate = count > 0 && count < checkboxes.length;
                 deleteButton.disabled = count === 0;
+                document.getElementById('selection-count').textContent = `${count}件選択中`;
+                document.querySelectorAll('.bulk-status-button').forEach(button => {
+                    button.disabled = count === 0;
+                });
             };
             selectAll.addEventListener('change', () => {
                 checkboxes.forEach(checkbox => { checkbox.checked = selectAll.checked; });
@@ -151,13 +161,18 @@
             checkboxes.forEach(checkbox => checkbox.addEventListener('change', updateSelection));
             bulkDeleteForm.addEventListener('submit', event => {
                 const count = checkboxes.filter(checkbox => checkbox.checked).length;
-                if (count === 0 || !window.confirm(`選択した${count}件を削除しますか？`)) {
+                if (count === 0 || (event.submitter === deleteButton
+                        && !window.confirm(`選択した${count}件を削除しますか？`))) {
                     event.preventDefault();
                 }
             });
             window.addEventListener('pageshow', updateSelection);
             updateSelection();
         }
+
+        document.querySelectorAll('.flash').forEach(message => {
+            window.setTimeout(() => message.remove(), 5000);
+        });
 
         const now = new Date();
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
