@@ -57,12 +57,15 @@ class TransactionTests {
         }
         jdbc.execute("CREATE TABLE todo_history (id BIGINT AUTO_INCREMENT PRIMARY KEY, todo_id BIGINT, operation VARCHAR(32))");
         jdbc.execute("CREATE TABLE audit_logs (id BIGINT AUTO_INCREMENT PRIMARY KEY, action VARCHAR(32), entity_type VARCHAR(64), entity_id BIGINT, user_id VARCHAR(255), old_value TEXT, new_value TEXT, ip_address VARCHAR(45), status VARCHAR(32), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+        new org.springframework.jdbc.datasource.init.ResourceDatabasePopulator(
+                new ClassPathResource("db/04_create_todo_templates.sql")).execute(ds);
         var factory = new SqlSessionFactoryBean();
         factory.setDataSource(ds);
         factory.setMapperLocations(new ClassPathResource("mapper/TodoMapper.xml"));
         var sf = factory.getObject();
         sf.getConfiguration().addMapper(TodoHistoryMapper.class);
         sf.getConfiguration().addMapper(AuditLogMapper.class);
+        sf.getConfiguration().addMapper(TodoTemplateMapper.class);
         sf.getConfiguration().setMapUnderscoreToCamelCase(true);
         var template = new SqlSessionTemplate(sf);
         todos = spy(template.getMapper(TodoMapper.class));
@@ -73,6 +76,11 @@ class TransactionTests {
         context.registerBean(TodoMapper.class, () -> todos);
         context.registerBean(TodoHistoryMapper.class, () -> history);
         context.registerBean(AuditLogMapper.class, () -> template.getMapper(AuditLogMapper.class));
+        context.registerBean(TodoTemplateMapper.class, () -> template.getMapper(TodoTemplateMapper.class));
+        context.registerBean(org.springframework.validation.beanvalidation.LocalValidatorFactoryBean.class);
+        context.registerBean(TodoTemplateService.class, () -> new TodoTemplateService(
+                context.getBean(TodoTemplateMapper.class), context.getBean("todoService", TodoService.class),
+                context.getBean(jakarta.validation.Validator.class)));
         context.register(AuditLogService.class, TodoService.class, com.example.todoapp.aspect.AuditAspect.class);
         context.registerBean(CheckedFailureService.class, () -> new CheckedFailureService(
                 todos, history));
@@ -248,4 +256,98 @@ class TransactionTests {
         service.deleteSubtask(parent.getId(), childId);
         assertThat(service.subtasks(parent.getId())).isEmpty();
         assertThat(service.findById(parent.getId()).getCompleted()).isFalse();
-    }}
+    }
+
+    private TodoTemplate savedTemplate() {
+        var template = new TodoTemplate();
+        template.setName("週の準備");
+        template.setDescription("毎週使うタスク");
+        template.setItems(java.util.List.of("計画", "振り返り"));
+        context.getBean(TodoTemplateService.class).create(template);
+        return template;
+    }
+
+    private TemplateTaskForm templateTaskForm(Long id) {
+        var form = new TemplateTaskForm();
+        form.setTemplateId(id);
+        form.setCategory("資格");
+        form.setDueDate(java.time.LocalDate.of(2026, 12, 1));
+        return form;
+    }
+
+    @Test
+    void templateLifecycleCreatesIndependentTasksAndCascadesItems() {
+        var templates = context.getBean(TodoTemplateService.class);
+        var template = savedTemplate();
+        assertThat(templates.findAll().getFirst().getItems()).containsExactly("計画", "振り返り");
+        assertThat(templates.createTasks(templateTaskForm(template.getId()))).isEqualTo(2);
+        assertThat(service.search(null, null, "asc")).extracting(Todo::getTitle)
+                .containsExactlyInAnyOrder("計画", "振り返り");
+        assertThat(count("todo_history")).isEqualTo(2);
+        templates.delete(template.getId());
+        assertThat(count("todo_template_items")).isZero();
+        assertThat(count("todo_templates")).isZero();
+        assertThat(count("todos")).isEqualTo(2);
+    }
+
+    @Test
+    void templateBulkCreationRollsBackEarlierTasksAndHistory() {
+        var template = savedTemplate();
+        doAnswer(invocation -> {
+            invocation.callRealMethod();
+            if (count("todo_history") == 2) throw new IllegalStateException("second task failed");
+            return null;
+        }).when(history).insert(anyLong(), eq("CREATE"));
+        assertThatThrownBy(() -> context.getBean(TodoTemplateService.class)
+                .createTasks(templateTaskForm(template.getId()))).isInstanceOf(IllegalStateException.class);
+        assertThat(count("todos")).isZero();
+        assertThat(count("todo_history")).isZero();
+        assertThat(count("todo_template_items")).isEqualTo(2);
+    }
+
+    @Test
+    void templateValidationAndMissingIdDoNotCreateTasks() {
+        var templates = context.getBean(TodoTemplateService.class);
+        var invalid = new TodoTemplate();
+        invalid.setName("invalid");
+        invalid.setItems(java.util.List.of(" "));
+        assertThatThrownBy(() -> templates.create(invalid))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(count("todo_templates")).isZero();
+        assertThatThrownBy(() -> templates.createTasks(templateTaskForm(999L)))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(count("todos")).isZero();
+    }
+
+    @Test
+    void templatePagesRenderAndPreserveValidationErrors() throws Exception {
+        savedTemplate();
+        var resolver = new org.thymeleaf.templateresolver.ClassLoaderTemplateResolver();
+        resolver.setCharacterEncoding("UTF-8");
+        resolver.setPrefix("templates/");
+        resolver.setSuffix(".html");
+        var engine = new org.thymeleaf.spring6.SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        var views = new org.thymeleaf.spring6.view.ThymeleafViewResolver();
+        views.setTemplateEngine(engine);
+        views.setCharacterEncoding("UTF-8");
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(
+                new TodoTemplateController(context.getBean(TodoTemplateService.class)))
+                .setViewResolvers(views)
+                .addFilters(new org.springframework.web.filter.CharacterEncodingFilter("UTF-8", true)).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/templates"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(
+                        org.hamcrest.Matchers.containsString("週の準備")));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/templates/new"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/templates")
+                        .param("name", "入力保持").param("items", ""))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().hasErrors())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.view().name("template-create"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/templates/apply")
+                        .param("templateId", "1").param("category", ""))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().hasErrors())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.view().name("todo-templates"));
+    }
+}

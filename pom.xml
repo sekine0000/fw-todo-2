@@ -125,6 +125,7 @@
 				<includes>
 					<include>02_create_transaction_tables.sql</include>
 					<include>03_create_audit_logs.sql</include>
+					<include>04_create_todo_templates.sql</include>
 				</includes>
 			</resource>
 		</resources>

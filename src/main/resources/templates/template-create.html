@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テンプレートを作成</title>
+    <link rel="stylesheet" href="/css/style.css?v=20261126-1">
+    <script defer src="/js/template-create.js"></script>
+</head>
+<body>
+<main class="container">
+    <h1 class="page-title">テンプレートを作成</h1>
+    <form method="post" th:action="@{/templates}" th:object="${template}">
+        <ul class="error" th:if="${#fields.hasAnyErrors()}">
+            <li th:each="error : ${#fields.allErrors()}" th:text="${error}"></li>
+        </ul>
+        <div class="form-row">
+            <label class="form-label" for="name">名前</label>
+            <input class="form-input" id="name" th:field="*{name}" required maxlength="255">
+        </div>
+        <div class="form-row">
+            <label class="form-label" for="description">説明</label>
+            <textarea class="form-input" id="description" th:field="*{description}" maxlength="2000"></textarea>
+        </div>
+        <fieldset>
+            <legend>タスクタイトル（1〜100件）</legend>
+            <div id="template-items">
+                <div class="form-row template-item" th:each="item, status : *{items}">
+                    <label class="form-label" th:for="${'item-' + status.index}" th:text="${'項目 ' + (status.index + 1)}"></label>
+                    <input class="form-input" th:id="${'item-' + status.index}" name="items" th:value="${item}" required maxlength="255">
+                    <button type="button" class="btn sub remove-item">項目を削除</button>
+                </div>
+            </div>
+            <button type="button" class="btn sub" id="add-item">項目を追加</button>
+        </fieldset>
+        <button class="btn" type="submit">テンプレートを保存</button>
+        <a class="btn sub" th:href="@{/templates}">戻る</a>
+    </form>
+</main>
+</body>
+</html>
