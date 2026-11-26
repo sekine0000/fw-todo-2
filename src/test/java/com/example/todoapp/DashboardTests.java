@@ -65,6 +65,34 @@ class DashboardTests {
     }
 
     @Test
+    void yearlyHeatmapIncludesExactly365DaysAndRespectsBoundariesAndScope() {
+        LocalDate end = LocalDate.of(2024, 3, 1);
+        LocalDate start = end.minusDays(364);
+        jdbc.update("INSERT INTO todos (id, completed, completed_at) VALUES (1, TRUE, ?), (2, TRUE, ?), (3, TRUE, ?), (4, TRUE, ?), (5, FALSE, ?)",
+                start.atStartOfDay(), end.atTime(23, 59, 59), start.atStartOfDay().minusSeconds(1),
+                end.plusDays(1).atStartOfDay(), end.atStartOfDay());
+        jdbc.update("INSERT INTO todos (id, completed, completed_at, archived, deleted_at, parent_id) VALUES "
+                + "(6, TRUE, ?, TRUE, NULL, NULL), (7, TRUE, ?, FALSE, CURRENT_TIMESTAMP, NULL), (8, TRUE, ?, FALSE, NULL, 1)",
+                end.atStartOfDay(), end.atStartOfDay(), end.atStartOfDay());
+        var heatmap = service.heatmap(end);
+        assertThat(heatmap.daily()).hasSize(365).containsEntry(start.toString(), 1L)
+                .containsEntry(end.toString(), 1L).containsEntry("2024-02-29", 0L);
+        assertThat(heatmap.daily().keySet().iterator().next()).isEqualTo(start.toString());
+        assertThat(heatmap.total()).isEqualTo(2);
+        assertThat(heatmap.activeDays()).isEqualTo(2);
+        assertThat(heatmap.maxDaily()).isEqualTo(1);
+    }
+
+    @Test
+    void emptyYearHasZeroStatistics() {
+        var heatmap = service.heatmap(today);
+        assertThat(heatmap.daily().values()).hasSize(365).containsOnly(0L);
+        assertThat(heatmap.total()).isZero();
+        assertThat(heatmap.activeDays()).isZero();
+        assertThat(heatmap.maxDaily()).isZero();
+    }
+
+    @Test
     void emptyDashboardRendersRealTemplateAndInlineData() throws Exception {
         var data = service.load(today);
         assertThat(data.summary().getTotal()).isZero();
@@ -84,6 +112,7 @@ class DashboardTests {
         var result = mvc.perform(get("/dashboard")).andExpect(status().isOk())
                 .andExpect(view().name("dashboard")).andReturn();
         String html = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(html).contains("id=\"completion-heatmap\"", "completion-heatmap.js", "年間完了数: 0件", "Less", "More");
         assertThat(html).contains("ダッシュボード", "タスクがありません", "const completed = 0;",
                 "const categories = [];", "chart.js@4.4.8", "id=\"category-chart\"");
         jdbc.update("INSERT INTO todos (id, category) VALUES (1, ?)", "</script><script>alert(1)</script>");

@@ -6,6 +6,7 @@
     <title>ダッシュボード | ToDo</title>
     <link rel="stylesheet" th:href="@{/css/style.css(v='20261126-2')}">
     <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/heatmap.css}">
 </head>
 <body>
 <main class="container dashboard">
@@ -22,6 +23,17 @@
     <p th:if="${summary.total == 0}">タスクがありません。<a class="link" th:href="@{/todos/new}">タスクを登録する</a></p>
     <p id="chart-error" role="status" hidden>グラフを読み込めませんでした。集計値は各カードと「集計データ」で確認できます。</p>
     <noscript><p>グラフの表示にはJavaScriptが必要です。集計データは以下で確認できます。</p></noscript>
+    <section class="dashboard-card completion-heatmap" aria-labelledby="heatmap-heading">
+        <h2 id="heatmap-heading">タスク完了ヒートマップ</h2>
+        <p>今日を含む過去365日（各週は日曜日始まり）</p>
+        <p th:text="${'年間完了数: ' + heatmap.total + '件 / 完了した日: ' + heatmap.activeDays + '日 / 1日の最多: ' + heatmap.maxDaily + '件'}"></p>
+        <div class="heatmap-scroll"><svg id="completion-heatmap" role="group" aria-label="過去365日の日別タスク完了数"></svg></div>
+        <div id="heatmap-tooltip" class="heatmap-tooltip" role="tooltip" hidden></div>
+        <div class="heatmap-legend" aria-label="完了数の色分け: 0件、1〜2件、3〜5件、6〜9件、10件以上">
+            <span>Less</span><i class="heatmap-level-0" title="0件"></i><i class="heatmap-level-1" title="1〜2件"></i><i class="heatmap-level-2" title="3〜5件"></i><i class="heatmap-level-3" title="6〜9件"></i><i class="heatmap-level-4" title="10件以上"></i><span>More</span>
+        </div>
+        <details><summary>日別集計データ</summary><table class="todo-table"><thead><tr><th>日付</th><th>完了件数</th></tr></thead><tbody><tr th:each="day : ${heatmap.daily}"><td th:text="${day.key}"></td><td th:text="${day.value}"></td></tr></tbody></table></details>
+    </section>
     <div class="dashboard-charts">
         <section class="dashboard-card">
             <h2>直近7日間の完了数</h2>
@@ -40,6 +52,10 @@
         </section>
     </div>
 </main>
+<script th:inline="javascript">
+    window.completionHeatmapData = /*[[${heatmap.daily}]]*/ {};
+</script>
+<script th:src="@{/js/completion-heatmap.js}"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 <script th:inline="javascript">
     (() => {

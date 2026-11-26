@@ -20,6 +20,7 @@ public class DashboardController {
         model.addAttribute("dailyLabels", java.util.List.copyOf(data.daily().keySet()));
         model.addAttribute("dailyCounts", java.util.List.copyOf(data.daily().values()));
         model.addAttribute("categories", data.categories());
+        model.addAttribute("heatmap", service.heatmap(today));
         return "dashboard";
     }
 }

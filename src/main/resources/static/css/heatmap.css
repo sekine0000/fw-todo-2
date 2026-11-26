@@ -1,0 +1,15 @@
+.completion-heatmap { margin: 24px 0; }
+.heatmap-scroll { overflow-x: auto; padding: 8px 0; }
+#completion-heatmap { display: block; }
+#completion-heatmap text { fill: currentColor; font-size: 10px; }
+.heatmap-level-0 { fill: #e5eee6; background: #e5eee6; }
+.heatmap-level-1 { fill: #9be9a8; background: #9be9a8; }
+.heatmap-level-2 { fill: #40c463; background: #40c463; }
+.heatmap-level-3 { fill: #30a14e; background: #30a14e; }
+.heatmap-level-4 { fill: #216e39; background: #216e39; }
+.heatmap-padding { fill: transparent; pointer-events: none; }
+.heatmap-cell:hover, .heatmap-cell:focus { stroke: currentColor; stroke-width: 2; outline: none; }
+.heatmap-legend { display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin: 8px 0 16px; font-size: 12px; }
+.heatmap-legend i { width: 12px; height: 12px; border-radius: 2px; }
+.heatmap-tooltip { position: fixed; z-index: 1000; padding: 6px 10px; border-radius: 5px; background: #16251c; color: #fff; font-size: 12px; pointer-events: none; white-space: nowrap; box-shadow: 0 2px 8px #0004; }
+.heatmap-tooltip[hidden] { display: none; }

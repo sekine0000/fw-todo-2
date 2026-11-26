@@ -25,4 +25,20 @@ public class DashboardService {
 
     public record Data(DashboardMapper.Summary summary, Map<String, Long> daily,
             List<DashboardMapper.CategoryCount> categories) { }
+
+    @Transactional(readOnly = true)
+    public Heatmap heatmap(LocalDate today) {
+        LocalDate start = today.minusDays(364);
+        Map<String, Long> daily = new LinkedHashMap<>();
+        for (int day = 0; day < 365; day++) daily.put(start.plusDays(day).toString(), 0L);
+        for (var row : mapper.dailyCounts(start.atStartOfDay(), today.plusDays(1).atStartOfDay())) {
+            String date = row.getCompletionDate().toString();
+            if (daily.containsKey(date)) daily.put(date, row.getTaskCount());
+        }
+        return new Heatmap(daily, daily.values().stream().mapToLong(Long::longValue).sum(),
+                daily.values().stream().filter(count -> count > 0).count(),
+                daily.values().stream().mapToLong(Long::longValue).max().orElse(0));
+    }
+
+    public record Heatmap(Map<String, Long> daily, long total, long activeDays, long maxDaily) { }
 }
