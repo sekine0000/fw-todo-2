@@ -50,6 +50,8 @@ public class Todo {
 
     /** {@code true} で完了。 */
     private Boolean completed;
+    private Boolean archived = false;
+    private LocalDateTime archivedAt;
     /** ピン留め状態。初期値は {@code false}。 */
     private Boolean pinned = false;
     /** 論理削除日時。{@code null} は未削除。 */

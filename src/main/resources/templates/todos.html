@@ -24,7 +24,7 @@
         <a th:href="@{/admin/audit-logs}">管理者向け監査ログ</a>
         <p class="flash" role="status" th:if="${message}" th:text="${message}"></p>
 
-        <h1 class="page-title" th:text="${trash ? '削除済みのやること' : 'やること一覧'}">やること一覧</h1>
+        <a class="link" th:href="@{/todo/archive}">アーカイブを見る</a><h1 class="page-title" th:text="${trash ? '削除済みのやること' : 'やること一覧'}">やること一覧</h1>
 
         <a class="link" th:unless="${trash}" th:href="@{/todos(trash=1)}">削除済みを見る</a>
         <a class="link" th:if="${trash}" th:href="@{/todos}">一覧に戻る</a>
@@ -133,7 +133,7 @@
                             <label><input type="checkbox" name="includeSubtasks" value="true" checked> サブタスクも複製</label>
                             <button class="btn" type="submit">複製</button>
                         </form>
-                        <a class="link" th:unless="${trash}" th:href="@{/todos/{id}/edit(id=${todo.id})}">編集</a>
+                        <form th:if="${!trash and todo.completed}" method="post" th:action="@{/todo/{id}/archive(id=${todo.id})}"><button class="btn" type="submit">アーカイブ</button></form><a class="link" th:unless="${trash}" th:href="@{/todos/{id}/edit(id=${todo.id})}">編集</a>
                         <a class="link" th:unless="${trash}" th:href="@{/todos/{id}/delete(id=${todo.id})}">削除</a>
                         <form th:if="${trash}" method="post" th:action="@{/todos/{id}/restore(id=${todo.id}, trash=1)}">
                             <button class="btn" type="submit">戻す</button>

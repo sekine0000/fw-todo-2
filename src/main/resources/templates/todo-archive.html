@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アーカイブ</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><div class="container">
+<h1>完了タスクのアーカイブ</h1>
+<a class="link" th:href="@{/todos}">一覧に戻る</a>
+<p>サブタスクは親タスクとまとめて復元・完全削除されます。</p>
+<p th:if="${#lists.isEmpty(todos)}">アーカイブ済みタスクはありません。</p>
+<table th:unless="${#lists.isEmpty(todos)}">
+<thead><tr><th>タイトル</th><th>完了日時</th><th>アーカイブ日時</th><th>操作</th></tr></thead>
+<tbody><tr th:each="todo : ${todos}">
+<td th:text="${todo.title}"></td>
+<td th:text="${todo.completedAt}"></td><td th:text="${todo.archivedAt}"></td>
+<td><form method="post" th:action="@{/todo/{id}/unarchive(id=${todo.id})}"><button class="btn" type="submit">復元</button></form>
+<form method="post" th:action="@{/todo/{id}/archive/delete(id=${todo.id})}" onsubmit="return confirm('サブタスクも含めて完全削除します。元に戻せません。よろしいですか？')"><button class="btn" type="submit">完全削除</button></form></td>
+</tr></tbody></table></div></body></html>

@@ -8,6 +8,8 @@ CREATE TABLE todos (
     priority INT NOT NULL DEFAULT 2,
     due_date DATE NULL,
     completed BOOLEAN NOT NULL DEFAULT FALSE,
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
+    archived_at TIMESTAMP NULL,
     pinned BOOLEAN NOT NULL DEFAULT FALSE,
     completed_at DATETIME NULL,
     deleted_at DATETIME NULL,

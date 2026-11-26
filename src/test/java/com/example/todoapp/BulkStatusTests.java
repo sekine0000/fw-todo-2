@@ -54,8 +54,8 @@ class BulkStatusTests {
         var ds = new org.springframework.jdbc.datasource.DriverManagerDataSource(
                 "jdbc:h2:mem:bulkstatus;MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
         var jdbc = new org.springframework.jdbc.core.JdbcTemplate(ds);
-        jdbc.execute("CREATE TABLE todos (id BIGINT PRIMARY KEY, completed BOOLEAN, completed_at TIMESTAMP, deleted_at TIMESTAMP)");
-        jdbc.update("INSERT INTO todos VALUES (1, FALSE, NULL, NULL), (2, FALSE, NULL, NULL), (3, FALSE, NULL, CURRENT_TIMESTAMP)");
+        jdbc.execute("CREATE TABLE todos (archived BOOLEAN NOT NULL DEFAULT FALSE, id BIGINT PRIMARY KEY, completed BOOLEAN, completed_at TIMESTAMP, deleted_at TIMESTAMP)");
+        jdbc.update("INSERT INTO todos (id, completed, completed_at, deleted_at) VALUES (1, FALSE, NULL, NULL), (2, FALSE, NULL, NULL), (3, FALSE, NULL, CURRENT_TIMESTAMP)");
         var factory = new org.mybatis.spring.SqlSessionFactoryBean();
         factory.setDataSource(ds);
         factory.setMapperLocations(new org.springframework.core.io.ClassPathResource("mapper/TodoMapper.xml"));

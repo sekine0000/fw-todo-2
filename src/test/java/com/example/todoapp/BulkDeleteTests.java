@@ -53,7 +53,7 @@ class BulkDeleteTests {
         var bound = statement.getBoundSql(params);
         String sql = bound.getSql().replaceAll("\\s+", " ");
         assertTrue(sql.contains("UPDATE todos SET deleted_at = CURRENT_TIMESTAMP"), sql);
-        assertTrue(sql.contains("WHERE deleted_at IS NULL AND id IN"), sql);
+        assertTrue(sql.contains("WHERE deleted_at IS NULL AND archived = FALSE AND id IN"), sql);
         assertEquals(2, bound.getParameterMappings().size());
         assertEquals(12L, bound.getAdditionalParameter(bound.getParameterMappings().get(0).getProperty()));
         assertEquals(34L, bound.getAdditionalParameter(bound.getParameterMappings().get(1).getProperty()));

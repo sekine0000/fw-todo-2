@@ -36,7 +36,7 @@ class ReorderTests {
         var ds = new org.springframework.jdbc.datasource.DriverManagerDataSource(
                 "jdbc:h2:mem:reorder;MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
         var jdbc = new org.springframework.jdbc.core.JdbcTemplate(ds);
-        jdbc.execute("CREATE TABLE todos (id BIGINT PRIMARY KEY, parent_id BIGINT, deleted_at TIMESTAMP, display_order INT DEFAULT 2147483647)");
+        jdbc.execute("CREATE TABLE todos (archived BOOLEAN NOT NULL DEFAULT FALSE, id BIGINT PRIMARY KEY, parent_id BIGINT, deleted_at TIMESTAMP, display_order INT DEFAULT 2147483647)");
         jdbc.update("INSERT INTO todos(id) VALUES (1), (2), (3)");
         var factory = new org.mybatis.spring.SqlSessionFactoryBean();
         factory.setDataSource(ds);

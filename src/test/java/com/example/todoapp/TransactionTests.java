@@ -49,7 +49,7 @@ class TransactionTests {
     void setUp() throws Exception {
         var ds = new DriverManagerDataSource("jdbc:h2:mem:" + System.nanoTime() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
         jdbc = new JdbcTemplate(ds);
-        jdbc.execute("CREATE TABLE todos (id BIGINT AUTO_INCREMENT PRIMARY KEY, parent_id BIGINT REFERENCES todos(id) ON DELETE CASCADE, display_order INT NOT NULL DEFAULT 2147483647, title VARCHAR(255) NOT NULL, detail VARCHAR(255), category VARCHAR(255), priority INT, due_date DATE, completed BOOLEAN)");
+        jdbc.execute("CREATE TABLE todos (archived BOOLEAN NOT NULL DEFAULT FALSE, id BIGINT AUTO_INCREMENT PRIMARY KEY, parent_id BIGINT REFERENCES todos(id) ON DELETE CASCADE, display_order INT NOT NULL DEFAULT 2147483647, title VARCHAR(255) NOT NULL, detail VARCHAR(255), category VARCHAR(255), priority INT, due_date DATE, completed BOOLEAN)");
         for (String column : java.util.List.of("pinned BOOLEAN DEFAULT FALSE", "deleted_at TIMESTAMP",
                 "completed_at TIMESTAMP", "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
                 "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")) {
@@ -338,7 +338,8 @@ class TransactionTests {
         var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(
                 new HomeController(service), new SubtaskController(service)).setViewResolvers(views).build();
         for (String path : java.util.List.of("/todos", "/todos/" + source.getId())) {
-            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path))
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path)
+                    .requestAttr("_csrf", new org.springframework.security.web.csrf.DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "test-token")))
                     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
                     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(
                             org.hamcrest.Matchers.containsString("/todo/" + source.getId() + "/duplicate")));
