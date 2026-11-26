@@ -1,5 +1,7 @@
 package com.example.todoapp;
 
+import java.util.List;
+
 import org.springframework.validation.BindingResult;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -151,6 +153,25 @@ public class HomeController {
 
         model.addAttribute("todo", todo);
         return "delete";
+    }
+
+    @PostMapping("/todos/bulk-delete")
+    public String bulkDelete(@RequestParam(name = "ids", required = false) List<Long> ids,
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "") String category,
+            @RequestParam(defaultValue = "asc") String order,
+            @RequestParam(defaultValue = "false") boolean showCompleted,
+            @RequestParam(defaultValue = "1") int page,
+            RedirectAttributes redirectAttributes) {
+        int deleted = todoService.deleteByIds(ids);
+        redirectAttributes.addFlashAttribute("message", deleted > 0
+                ? deleted + "件削除しました" : "削除対象が選択されていません、または削除済みです");
+        redirectAttributes.addAttribute("keyword", keyword);
+        redirectAttributes.addAttribute("category", category);
+        redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");
+        redirectAttributes.addAttribute("showCompleted", showCompleted);
+        redirectAttributes.addAttribute("page", page);
+        return "redirect:/todos";
     }
 
     @PostMapping("/todos/{id}/delete")

@@ -78,4 +78,11 @@ public class TodoService {
     public void togglePinned(Long id) {
         todoMapper.togglePinned(id);
     }
+
+    public int deleteByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        return todoMapper.deleteByIds(ids);
+    }
 }
