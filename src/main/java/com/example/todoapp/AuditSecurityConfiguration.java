@@ -27,8 +27,11 @@ public class AuditSecurityConfiguration {
         // so ToDo changes made by signed-in users carry their identity in the audit log.
         return http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .csrf(csrf -> csrf.requireCsrfProtectionMatcher(request ->
-                        "POST".equals(request.getMethod())
-                                && (request.getContextPath() + "/api/todo").equals(request.getRequestURI())))
+                        ("POST".equals(request.getMethod())
+                                && (request.getContextPath() + "/api/todo").equals(request.getRequestURI()))
+                        || ("PATCH".equals(request.getMethod())
+                                && request.getRequestURI().substring(request.getContextPath().length())
+                                        .matches("/api/todos/[^/]+/status"))))
                 .build();
     }
 }

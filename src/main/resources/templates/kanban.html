@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <title>カンバンボード</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/kanban.css}">
+    <script defer th:src="@{/js/kanban.js}"></script>
+</head>
+<body>
+<main class="container kanban-container">
+    <h1 class="page-title">カンバンボード</h1>
+    <nav aria-label="表示の切り替え">
+        <a class="link" th:href="@{/todos}">一覧で見る</a>
+        <a class="btn" th:href="@{/todos/new}">新規登録</a>
+    </nav>
+    <p>カードをドラッグするか、ステータスを選択して移動できます。</p>
+    <p id="kanban-message" role="status" aria-live="polite"></p>
+    <div class="kanban-scroll">
+        <div class="kanban-board">
+            <section class="kanban-column" th:each="status : ${statuses}" th:attr="data-status=${status}">
+                <h2 th:text="${status == 'TODO' ? '未着手' : (status == 'IN_PROGRESS' ? '進行中' : '完了')}"></h2>
+                <div class="kanban-cards">
+                    <article class="kanban-card" draggable="true" th:each="task : ${tasks}" th:if="${task.status == status}"
+                             th:attr="data-url=@{/api/todos/{id}/status(id=${task.id})},data-status=${task.status}">
+                        <a th:href="@{/todos/{id}(id=${task.id})}" th:text="${task.title}"></a>
+                        <p th:text="${task.category}"></p>
+                        <p th:if="${task.dueDate != null}">期限：<time th:text="${task.dueDate}"></time></p>
+                        <label>ステータス
+                            <select class="kanban-status">
+                                <option value="TODO" th:selected="${status == 'TODO'}">未着手</option>
+                                <option value="IN_PROGRESS" th:selected="${status == 'IN_PROGRESS'}">進行中</option>
+                                <option value="DONE" th:selected="${status == 'DONE'}">完了</option>
+                            </select>
+                        </label>
+                    </article>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+</body>
+</html>
