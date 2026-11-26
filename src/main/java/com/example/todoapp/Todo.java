@@ -25,6 +25,7 @@ public class Todo {
     private Long id;
 
     private Long parentId;
+    private Integer displayOrder;
 
     /** 必須の名称。最大255文字。 */
     @NotBlank(message = "やることを入力してください")

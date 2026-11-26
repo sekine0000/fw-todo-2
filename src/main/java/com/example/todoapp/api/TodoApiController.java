@@ -37,6 +37,13 @@ import jakarta.validation.Valid;
  */
 @RestController
 public class TodoApiController {
+    public record ReorderRequest(List<Long> ids) {}
+
+    @PutMapping("/api/todo/reorder")
+    public ResponseEntity<Void> reorder(@RequestBody ReorderRequest request) {
+        todoService.reorder(request.ids());
+        return ResponseEntity.noContent().build();
+    }
 
     private final TodoService todoService;
 
@@ -94,7 +101,7 @@ public class TodoApiController {
         StringBuilder csv = new StringBuilder("\uFEFF");
         appendCsvRow(csv, "やること", "ジャンル", "優先度", "期限", "状態");
         for (Todo todo : todoService.searchCsv(keyword, category,
-                "desc".equals(order) ? "desc" : "asc", showCompleted, "1".equals(trash))) {
+                "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc"), showCompleted, "1".equals(trash))) {
             String priority = Integer.valueOf(1).equals(todo.getPriority()) ? "高"
                     : Integer.valueOf(2).equals(todo.getPriority()) ? "中"
                     : Integer.valueOf(3).equals(todo.getPriority()) ? "低" : "";

@@ -64,12 +64,12 @@ public class HomeController {
     @GetMapping("/todos")
     public String todos(@RequestParam(defaultValue = "") String keyword,
             @RequestParam(defaultValue = "") String category,
-            @RequestParam(defaultValue = "asc") String order,
+            @RequestParam(defaultValue = "manual") String order,
             @RequestParam(defaultValue = "false") boolean showCompleted,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "") String trash, Model model) {
         boolean showTrash = "1".equals(trash);
-        String selectedOrder = "desc".equals(order) ? "desc" : "asc";
+        String selectedOrder = "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc");
         long total = showTrash ? todoService.countTrash(keyword, category)
                 : todoService.count(keyword, category, showCompleted);
         long totalPages = Math.max(1, (total + 9) / 10);
@@ -118,14 +118,14 @@ public class HomeController {
     public String togglePinned(@PathVariable Long id,
             @RequestParam(defaultValue = "") String keyword,
             @RequestParam(defaultValue = "") String category,
-            @RequestParam(defaultValue = "asc") String order,
+            @RequestParam(defaultValue = "manual") String order,
             @RequestParam(defaultValue = "false") boolean showCompleted,
             @RequestParam(defaultValue = "1") int page,
             RedirectAttributes redirectAttributes) {
         todoService.togglePinned(id);
         redirectAttributes.addAttribute("keyword", keyword);
         redirectAttributes.addAttribute("category", category);
-        redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");
+        redirectAttributes.addAttribute("order", "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc"));
         redirectAttributes.addAttribute("showCompleted", showCompleted);
         redirectAttributes.addAttribute("page", page);
         return "redirect:/todos";
@@ -286,7 +286,7 @@ public class HomeController {
     public String bulkDelete(@RequestParam(name = "ids", required = false) List<Long> ids,
             @RequestParam(defaultValue = "") String keyword,
             @RequestParam(defaultValue = "") String category,
-            @RequestParam(defaultValue = "asc") String order,
+            @RequestParam(defaultValue = "manual") String order,
             @RequestParam(defaultValue = "false") boolean showCompleted,
             @RequestParam(defaultValue = "1") int page,
             RedirectAttributes redirectAttributes) {
@@ -295,7 +295,7 @@ public class HomeController {
                 ? deleted + "件削除しました" : "削除対象が選択されていません、または削除済みです");
         redirectAttributes.addAttribute("keyword", keyword);
         redirectAttributes.addAttribute("category", category);
-        redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");
+        redirectAttributes.addAttribute("order", "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc"));
         redirectAttributes.addAttribute("showCompleted", showCompleted);
         redirectAttributes.addAttribute("page", page);
         return "redirect:/todos";

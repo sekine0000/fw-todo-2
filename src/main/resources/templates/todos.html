@@ -45,6 +45,7 @@
             </label>
             <button class="btn" type="submit">絞り込む</button>
 
+            <a class="link" th:unless="${trash}" th:href="@{/todos(keyword=${keyword}, category=${category}, order='manual', showCompleted=${showCompleted})}">手動順</a>
             <a class="link" th:href="@{/todos(keyword=${keyword}, category=${category}, order='asc', showCompleted=${showCompleted}, trash=${trash ? 1 : null})}">期限が近い順</a>
             <a class="link" th:href="@{/todos(keyword=${keyword}, category=${category}, order='desc', showCompleted=${showCompleted}, trash=${trash ? 1 : null})}">期限が遠い順</a>
         </form>
@@ -64,6 +65,8 @@
             <button id="bulk-delete-button" class="btn" type="submit" disabled>選択した項目を削除</button>
         </form>
 
+        <p th:if="${!trash and order == 'manual'}">行をドラッグして並び替えできます（表示中のページ内）。</p>
+        <p id="reorder-status" role="status" aria-live="polite"></p>
         <table class="todo-table" th:unless="${#lists.isEmpty(todos)}">
             <thead>
                 <tr>
@@ -78,8 +81,8 @@
                     <th>操作</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr th:each="todo : ${todos}" th:attr="data-due-date=${todo.dueDate},data-completed=${todo.completed}">
+            <tbody id="todo-rows" th:attr="data-reorder-enabled=${!trash and order == 'manual'},data-reorder-url=@{/api/todo/reorder}">
+                <tr th:each="todo : ${todos}" th:attr="data-id=${todo.id},draggable=${!trash and order == 'manual'},data-due-date=${todo.dueDate},data-completed=${todo.completed}">
                     <td th:unless="${trash}">
                         <input class="todo-select" type="checkbox" name="ids" th:value="${todo.id}"
                                form="bulk-delete-form" th:attr="aria-label=${todo.title + 'を選択'}">
@@ -124,6 +127,7 @@
             </th:block>
         </nav>
     </div>
+    <script th:src="@{/js/todo-reorder.js}" defer></script>
     <script>
         const bulkDeleteForm = document.getElementById('bulk-delete-form');
         if (bulkDeleteForm) {

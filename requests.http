@@ -105,3 +105,8 @@ Mcp-Session-Id: e741f225-3d57-4318-9934-fe63b43f2e1f
 
 { "jsonrpc": "2.0", "id": 3, "method": "tools/call",
   "params": { "name": "list_todos", "arguments": {} } }
+### 手動順を一括保存（表示中のタスクIDを希望順に指定）
+PUT http://localhost:8080/api/todo/reorder
+Content-Type: application/json
+
+{"ids": [3, 1, 2]}

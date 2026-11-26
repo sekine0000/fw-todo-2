@@ -21,12 +21,17 @@
         <where><include refid="listConditions" /></where>
     </select>
     <sql id="listOrder">
+        <choose>
+        <when test="order == 'manual'">ORDER BY display_order ASC, id ASC</when>
+        <otherwise>
         ORDER BY pinned DESC, due_date
         <choose>
             <when test="order == 'desc'">DESC</when>
             <otherwise>ASC</otherwise>
         </choose>
         , id ASC
+        </otherwise>
+        </choose>
     </sql>
     <select id="searchCsv" resultType="com.example.todoapp.Todo">
         SELECT title, category, priority, due_date, completed, completed_at FROM todos
@@ -42,14 +47,14 @@
         </choose>
     </select>
     <select id="searchPage" resultType="com.example.todoapp.Todo">
-        SELECT id, parent_id, title, detail, category, priority, due_date, completed, pinned, completed_at, created_at, updated_at
+        SELECT id, parent_id, display_order, title, detail, category, priority, due_date, completed, pinned, completed_at, created_at, updated_at
         FROM todos
         <where><include refid="listConditions" /></where>
         <include refid="listOrder" />
         LIMIT 10 OFFSET #{offset}
     </select>
     <select id="search" resultType="com.example.todoapp.Todo">
-        SELECT id, parent_id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
+        SELECT id, parent_id, display_order, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos
         <where>
             <include refid="listConditions" />
@@ -60,14 +65,19 @@
                 AND due_date &lt;= #{to}
             </if>
         </where>
+        <choose>
+        <when test="order == 'manual'">ORDER BY display_order ASC, id ASC</when>
+        <otherwise>
         ORDER BY due_date
         <choose>
             <when test="order == 'desc'">DESC</when>
             <otherwise>ASC</otherwise>
         </choose>
+        </otherwise>
+        </choose>
     </select>
     <select id="findById" resultType="com.example.todoapp.Todo">
-        SELECT id, parent_id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
+        SELECT id, parent_id, display_order, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos
         WHERE id = #{id} AND deleted_at IS NULL
     </select>
@@ -133,7 +143,7 @@
         , id ASC
     </sql>
     <select id="searchTrashPage" resultType="com.example.todoapp.Todo">
-        SELECT id, parent_id, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
+        SELECT id, parent_id, display_order, title, detail, category, priority, due_date, completed, completed_at, created_at, updated_at
         FROM todos WHERE <include refid="trashConditions" />
         <include refid="trashOrder" />
         LIMIT 10 OFFSET #{offset}
@@ -154,4 +164,17 @@
     <delete id="removeSubtask">
         DELETE FROM todos WHERE id = #{id} AND parent_id = #{parentId}
     </delete>
+    <select id="findOrderedIdsForUpdate" resultType="long">
+        SELECT id FROM todos WHERE deleted_at IS NULL AND parent_id IS NULL
+        ORDER BY display_order ASC, id ASC FOR UPDATE
+    </select>
+    <update id="updateDisplayOrder">
+        UPDATE todos SET display_order = CASE id
+        <foreach collection="ids" item="id" index="position">
+            WHEN #{id} THEN #{position}
+        </foreach>
+        END
+        WHERE deleted_at IS NULL AND parent_id IS NULL AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </update>
 </mapper>

@@ -15,6 +15,8 @@ class SubtaskSchemaInitializerTests {
         var initializer = new SubtaskSchemaInitializer(ds);
         initializer.afterPropertiesSet();
         initializer.afterPropertiesSet();
+        assertThat(jdbc.queryForObject("SELECT display_order FROM todos WHERE id = 1", Integer.class))
+                .isEqualTo(Integer.MAX_VALUE);
         assertThat(jdbc.queryForObject("SELECT title FROM todos WHERE id = 1", String.class)).isEqualTo("existing");
         jdbc.update("INSERT INTO todos (id, parent_id, title) VALUES (2, 1, 'child')");
         jdbc.update("DELETE FROM todos WHERE id = 1");

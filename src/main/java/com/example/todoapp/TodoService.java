@@ -287,6 +287,26 @@ public class TodoService {
         return todoMapper.findSubtasks(parentId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void reorder(List<Long> ids) {
+        if (ids == null || ids.isEmpty() || ids.stream().anyMatch(id -> id == null || id <= 0)
+                || new java.util.HashSet<>(ids).size() != ids.size()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid task IDs");
+        }
+        var ordered = new java.util.ArrayList<>(todoMapper.findOrderedIdsForUpdate());
+        if (!ordered.containsAll(ids)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.CONFLICT, "Tasks changed; reload the list");
+        }
+        var selected = new java.util.HashSet<>(ids);
+        var replacement = ids.iterator();
+        for (int i = 0; i < ordered.size(); i++) {
+            if (selected.contains(ordered.get(i))) ordered.set(i, replacement.next());
+        }
+        todoMapper.updateDisplayOrder(ordered);
+    }
+
     private Todo lockParent(Long id) {
         Todo parent = todoMapper.findForUpdate(id);
         if (parent == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
